@@ -1,0 +1,6 @@
+v1	ancoras em 1M/s
+v2	Inversão de posição ancora 5 e 6
+v3	âncoras em 112500, ainda com inversão de posição 5 e 6
+v4	Teste com 4 beacons - 112500, ainda com inversão de posição 5 e 6
+v5	âncora 6 na própria rasp e posição janela (original) - 112500
+v6	Idem v5, porém com 4 tags simultâneas
