@@ -1,6 +1,8 @@
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+import seaborn as sns
 
 '''Arquivo para processar e analisar a perda dos pacotes do Dataset'''
 
@@ -27,6 +29,21 @@ anchor_mapping = {
     'ble-pd-639AA0EB1D6C': 6,
     'ble-pd-D299A0EB1D6C': 7    
 }
+
+# Coordenadas das âncoras
+anchor_coords = {
+    1: {'x': -1.00, 'y': 7.83},  # A01
+    2: {'x': -0.96, 'y': 1.22},  # A02
+    3: {'x': -5.81, 'y': 7.85},  # A03
+    4: {'x': -3.50, 'y': 4.60},  # A04
+    5: {'x': -5.76, 'y': 4.64},  # A05
+    6: {'x': -0.98, 'y': 4.54},  # A06
+    7: {'x': -5.85, 'y': 1.21},  # A07
+}
+
+# Caminho para a imagem de fundo
+img_path = '1. Arquivos Python/99. Imagens/background_v2.png'
+img = mpimg.imread(img_path)
 
 # Verificar se o cenário é válido
 if cenario not in cenario_to_folder:
@@ -117,7 +134,14 @@ fig, axes = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
 # Gráfico de linhas para perda de pacotes por arquivo (RSSI)
 for anchor in results_df['anchor'].unique():
     anchor_data = results_df[results_df['anchor'] == anchor]
-    axes[0].plot(anchor_data['file_name'], anchor_data['rssi_loss_percentage'], label=f'RSSI Loss - Anchor {anchor}')
+    
+    # Iterar sobre todos os file_names associados à âncora
+    for file_name in anchor_data['file_name'].unique():
+        file_data = anchor_data[anchor_data['file_name'] == file_name]
+        
+        # Iterar sobre todos os ppe_ids associados ao file_name
+        for _, row in file_data.iterrows():
+            axes[0].scatter(file_name, row['rssi_loss_percentage'], label=f'RSSI Loss - Anchor {anchor}', alpha=0.6)
 
 axes[0].set_title('Perda de Pacotes (RSSI) por Arquivo e Âncora')
 axes[0].set_ylabel('Porcentagem de Perda (%)')
@@ -127,7 +151,14 @@ axes[0].grid(True)
 # Gráfico de linhas para perda de pacotes por arquivo (PeriodicSync)
 for anchor in results_df['anchor'].unique():
     anchor_data = results_df[results_df['anchor'] == anchor]
-    axes[1].plot(anchor_data['file_name'], anchor_data['periodic_sync_loss_percentage'], label=f'PeriodicSync Loss - Anchor {anchor}')
+    
+    # Iterar sobre todos os file_names associados à âncora
+    for file_name in anchor_data['file_name'].unique():
+        file_data = anchor_data[anchor_data['file_name'] == file_name]
+        
+        # Iterar sobre todos os ppe_ids associados ao file_name
+        for _, row in file_data.iterrows():
+            axes[1].scatter(file_name, row['periodic_sync_loss_percentage'], label=f'PeriodicSync Loss - Anchor {anchor}', alpha=0.6)
 
 axes[1].set_title('Perda de Pacotes (PeriodicSync) por Arquivo e Âncora')
 axes[1].set_ylabel('Porcentagem de Perda (%)')
@@ -139,3 +170,104 @@ axes[1].grid(True)
 plt.xticks(rotation=90)
 plt.tight_layout()
 plt.show()
+
+'''Heatmap de Perda de Pacotes'''
+# # Criar uma tabela pivot para o heatmap de RSSI (por arquivo de teste)
+# heatmap_rssi = results_df.pivot_table(
+#     values='rssi_loss_percentage',
+#     index='file_name',
+#     columns='anchor',
+#     aggfunc='mean'
+# )
+
+# # Criar o heatmap para RSSI
+# plt.figure(figsize=(12, 8))
+# sns.heatmap(heatmap_rssi, annot=True, cmap='coolwarm', fmt=".1f", cbar_kws={'label': 'Porcentagem de Perda (%)'})
+# plt.title('Heatmap de Perda de Pacotes (RSSI) por Arquivo de Teste')
+# plt.xlabel('Âncora')
+# plt.ylabel('Arquivo de Teste')
+# plt.xticks(rotation=45)
+# plt.tight_layout()
+# plt.show()
+
+# # Criar uma tabela pivot para o heatmap de PeriodicSync (por arquivo de teste)
+# heatmap_periodic_sync = results_df.pivot_table(
+#     values='periodic_sync_loss_percentage',
+#     index='file_name',
+#     columns='anchor',
+#     aggfunc='mean'
+# )
+
+# # Criar o heatmap para PeriodicSync
+# plt.figure(figsize=(12, 8))
+# sns.heatmap(heatmap_periodic_sync, annot=True, cmap='coolwarm', fmt=".1f", cbar_kws={'label': 'Porcentagem de Perda (%)'})
+# plt.title('Heatmap de Perda de Pacotes (PeriodicSync) por Arquivo de Teste')
+# plt.xlabel('Âncora')
+# plt.ylabel('Arquivo de Teste')
+# plt.xticks(rotation=45)
+# plt.tight_layout()
+# plt.show()
+
+
+'''Gráfico espacial'''
+
+
+# Número de subplots por figura
+subplots_per_figure = 4  # Ajuste conforme necessário
+num_figures = (len(anchor_coords) + subplots_per_figure - 1) // subplots_per_figure  # Número total de figuras
+
+# Iterar sobre as figuras
+for fig_idx in range(num_figures):
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))  # 2x2 grid para cada figura
+    axes = axes.flatten()  # Transformar em uma lista para fácil iteração
+    
+    # Iterar sobre as âncoras para a figura atual
+    for subplot_idx in range(subplots_per_figure):
+        anchor_idx = fig_idx * subplots_per_figure + subplot_idx
+        if anchor_idx >= len(anchor_coords):
+            break  # Não há mais âncoras para plotar
+        
+        anchor, coords = list(anchor_coords.items())[anchor_idx]
+        ax = axes[subplot_idx]
+        ax.imshow(img, extent=[0, -10.70, 8.8, 0])  # Ajustar os limites do eixo com base no sistema fornecido
+        
+        # Plotar a âncora
+        ax.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor}')
+        ax.text(coords['x'], coords['y'] + 0.3, f'A{anchor}', fontsize=10, color='red', ha='center')
+        
+        # Filtrar os resultados para a âncora atual
+        anchor_results = results_df[results_df['anchor'] == anchor]
+        
+        # Plotar as posições dos testes e sobrepor as perdas de pacotes
+        for _, row in anchor_results.iterrows():
+            # Obter a posição do teste
+            file_name = row['file_name']
+            data_file_path = os.path.join(data_path, file_name)
+            data_df = pd.read_csv(data_file_path)
+            test_position = data_df[data_df['ppeID'] == row['ppe_id']][['X_real', 'Y_real']].iloc[0]
+            x_real, y_real = test_position['X_real'], test_position['Y_real']
+            
+            # Obter as perdas de pacotes
+            rssi_loss = row['rssi_loss_percentage']
+            periodic_sync_loss = row['periodic_sync_loss_percentage']
+            
+            # Plotar a posição do teste
+            ax.scatter(x_real, y_real, color='blue', marker='o', s=50, alpha=0.6)
+            
+            # Adicionar texto com as perdas de pacotes
+            ax.text(x_real, y_real - 0.2, f'RSSI: {rssi_loss:.1f}%', fontsize=8, color='blue', ha='center')
+            ax.text(x_real, y_real - 0.4, f'PSync: {periodic_sync_loss:.1f}%', fontsize=8, color='green', ha='center')
+        
+        # Configurações do subplot
+        ax.set_title(f"Anchor A{anchor}")
+        ax.set_xlabel("X-axis (meters)")
+        ax.set_ylabel("Y-axis (meters)")
+    
+    # Remover subplots extras (se houver)
+    for subplot_idx in range(subplots_per_figure, len(axes)):
+        fig.delaxes(axes[subplot_idx])
+    
+    # Ajustar layout e exibir a figura
+    plt.tight_layout()
+    plt.show()
+
