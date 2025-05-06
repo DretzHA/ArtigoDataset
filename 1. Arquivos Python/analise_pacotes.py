@@ -7,7 +7,7 @@ import seaborn as sns
 '''Arquivo para processar e analisar a perda dos pacotes do Dataset'''
 
 #Escolher Cenário - calibration | static | mobility
-cenario = 'calibration'
+cenario = 'static'
 
 # Total esperado de pacotes
 total_esperado = 181
@@ -128,20 +128,13 @@ plt.xlabel('Âncora')
 plt.ylabel('Porcentagem de Perda (%)')
 plt.show()
 
-# Criar subplots para os dois gráficos
+# Criar subplots para os dois gráficoS
 fig, axes = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
-
+ 
 # Gráfico de linhas para perda de pacotes por arquivo (RSSI)
 for anchor in results_df['anchor'].unique():
     anchor_data = results_df[results_df['anchor'] == anchor]
-    
-    # Iterar sobre todos os file_names associados à âncora
-    for file_name in anchor_data['file_name'].unique():
-        file_data = anchor_data[anchor_data['file_name'] == file_name]
-        
-        # Iterar sobre todos os ppe_ids associados ao file_name
-        for _, row in file_data.iterrows():
-            axes[0].scatter(file_name, row['rssi_loss_percentage'], label=f'RSSI Loss - Anchor {anchor}', alpha=0.6)
+    axes[0].plot(anchor_data['file_name'], anchor_data['rssi_loss_percentage'], label=f'RSSI Loss - Anchor {anchor}')
 
 axes[0].set_title('Perda de Pacotes (RSSI) por Arquivo e Âncora')
 axes[0].set_ylabel('Porcentagem de Perda (%)')
@@ -151,14 +144,7 @@ axes[0].grid(True)
 # Gráfico de linhas para perda de pacotes por arquivo (PeriodicSync)
 for anchor in results_df['anchor'].unique():
     anchor_data = results_df[results_df['anchor'] == anchor]
-    
-    # Iterar sobre todos os file_names associados à âncora
-    for file_name in anchor_data['file_name'].unique():
-        file_data = anchor_data[anchor_data['file_name'] == file_name]
-        
-        # Iterar sobre todos os ppe_ids associados ao file_name
-        for _, row in file_data.iterrows():
-            axes[1].scatter(file_name, row['periodic_sync_loss_percentage'], label=f'PeriodicSync Loss - Anchor {anchor}', alpha=0.6)
+    axes[1].plot(anchor_data['file_name'], anchor_data['periodic_sync_loss_percentage'], label=f'PeriodicSync Loss - Anchor {anchor}')
 
 axes[1].set_title('Perda de Pacotes (PeriodicSync) por Arquivo e Âncora')
 axes[1].set_ylabel('Porcentagem de Perda (%)')
