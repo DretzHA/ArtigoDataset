@@ -1,0 +1,17 @@
+Ordem Colunas:
+
+Create Time
+idPpe
+idBeacon
+Sequence_number
+BLE Channel
+RSSI_{1 a 7}
+Azim{1 a 5}
+Elev{1 a 7}
+iq_I_1
+iq_Q_1
+iq_I_2
+iq_Q_2
+...
+iq_I_7
+iq_Q_7
