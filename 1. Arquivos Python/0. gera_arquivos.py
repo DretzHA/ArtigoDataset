@@ -17,17 +17,14 @@ input_columns = [
     "CreateTime", "ppeID", "idBeacon", "Sequence_number", "Channel",
     "RSSI_1", "RSSI_2", "RSSI_3", "RSSI_4", "RSSI_5", "RSSI_6", "RSSI_7",
     "Azim_1", "Azim_2", "Azim_3", "Azim_4", "Azim_5",
-    "Elev_1", "Elev_2", "Elev_3", "Elev_4", "Elev_5", "Elev_6", "Elev_7"
+    "Elev_1", "Elev_2", "Elev_3", "Elev_4", "Elev_5", "Elev_6", "Elev_7",
+    "X_sylabs", "Y_sylabs", "Z_sylabs", "X_real", "Y_real", "Z_real"
 ]
 
 # Adicionar colunas de IQ (exemplo: iq_i_1, iq_q_1, ..., iq_i_7, iq_q_7)
 for i in range(1, 8):
     input_columns.append(f"iq_i_{i}")
     input_columns.append(f"iq_q_{i}")
-
-# Adicionar colunas de coordenadas
-input_columns += ["X_sylabs", "Y_sylabs", "Z_sylabs", "X_real", "Y_real", "Z_real"]
-
 
 # Função para encontrar o arquivo de referência correspondente
 def find_reference_file(input_file_name, reference_folder):
@@ -46,34 +43,79 @@ def find_reference_file(input_file_name, reference_folder):
     # Retornar None se nenhum arquivo correspondente for encontrado
     return None
 
-# Função para processar um único arquivo
 def process_file(input_file_path, reference_file_path):
-    # Ler o arquivo de entrada (TXT) e adicionar as colunas esperadas
-    input_df = pd.read_csv(input_file_path, header=None)
-    input_df.columns = input_columns
+    # Ler o arquivo de entrada (TXT) sem atribuir nomes às colunas
+    input_df = pd.read_csv(input_file_path, header=None, on_bad_lines='skip')
 
-    # Converter colunas de IQ de strings para listas reais
-    iq_columns = [col for col in input_columns if col.startswith('iq_')]
-    for iq_col in iq_columns:
-        input_df[iq_col] = input_df[iq_col].apply(
-            lambda x: ast.literal_eval(x) if isinstance(x, str) and x.startswith('[') else x
-        )
+    # Índice inicial das colunas de IQ
+    iq_start_index = 24  # Começa na coluna 24
+    iq_block_size = 82   # Tamanho de cada bloco de IQ (82 elementos)
+
+    # Criar listas para armazenar os valores processados de IQ
+    iq_i_values = {i: [] for i in range(1, 5)}  # Para iq_i_1 a iq_i_4
+    iq_q_values = {i: [] for i in range(1, 5)}  # Para iq_q_1 a iq_q_4
+
+    # Processar cada linha individualmente
+    for _, row in input_df.iterrows():
+        current_start_index = iq_start_index  # Reiniciar o índice inicial para cada linha
+
+        for i in range(1, 5):  # Para iq_i_1 a iq_i_4 e iq_q_1 a iq_q_4
+            iq_i_indices = list(range(current_start_index, current_start_index + iq_block_size))
+            iq_q_indices = list(range(current_start_index + iq_block_size, current_start_index + 2 * iq_block_size))
+
+            if row[iq_i_indices].isnull().any() or row[iq_q_indices].isnull().any():
+                # Se houver NaN, preencher com NaN e pular 2 colunas
+                iq_i_values[i].append([float('nan')] * iq_block_size)
+                iq_q_values[i].append([float('nan')] * iq_block_size)
+                current_start_index += 2  # Pular 2 colunas
+            else:
+                # Caso contrário, processar normalmente
+                iq_i_values[i].append(row[iq_i_indices].tolist())
+                iq_q_values[i].append(row[iq_q_indices].tolist())
+                current_start_index += 2 * iq_block_size  # Avançar para o próximo bloco
+
+    # Adicionar as colunas processadas ao DataFrame
+    for i in range(1, 5):
+        input_df[f"iq_i_{i}"] = iq_i_values[i]
+        input_df[f"iq_q_{i}"] = iq_q_values[i]
+
+    # Remover as colunas originais do DataFrame
+    cols_to_drop = []
+    for i in range(4):  # Para os 4 blocos de IQ
+        cols_to_drop.extend(list(range(iq_start_index + i * 2 * iq_block_size, iq_start_index + (i + 1) * 2 * iq_block_size)))
+    input_df.drop(columns=cols_to_drop, inplace=True)
+
+    # Preencher os valores de IQ para iq_i_5, iq_q_5, ..., iq_i_7, iq_q_7 com NaN
+    for i in range(5, 8):  # Para iq_i_5 a iq_i_7 e iq_q_5 a iq_q_7
+        input_df[f"iq_i_{i}"] = [float('nan')] * len(input_df)
+        input_df[f"iq_q_{i}"] = [float('nan')] * len(input_df)
+
+    # Remover as colunas com os títulos 680, 681, 682, 683, 684, 685
+    colunas_para_remover = [680, 681, 682, 683, 684, 685]
+    input_df = input_df.drop(columns=colunas_para_remover, errors='ignore')
+
+    # Atribuir os nomes das colunas após o tratamento
+    input_df.columns = input_columns
 
     # Ler o arquivo de referência (CSV)
     reference_df = pd.read_csv(reference_file_path)
 
     # Mapear o ppeID no arquivo de referência
-    input_df['ppeID'] = input_df['idPpe'].map(ppeid_mapping)
+    input_df['ppeID'] = input_df['ppeID'].map(ppeid_mapping)
+
+    # Filtrar para manter apenas os ppeID encontrados no arquivo de referência
+    valid_ppeIDs = reference_df['ppeID'].unique()
+    input_df = input_df[input_df['ppeID'].isin(valid_ppeIDs)]
 
     # Adicionar ou substituir as colunas no arquivo de entrada
     for index, row in input_df.iterrows():
-        ppe_id = row['idPpe']
-        sequence_number = row['idBeacon']
+        ppe_id = row['ppeID']
+        sequence_number = row['Sequence_number']
 
         # Filtrar o DataFrame de referência para encontrar os valores correspondentes
         match = reference_df[
             (reference_df['ppeID'] == ppe_id) &
-            (reference_df['idBeacon'] == sequence_number)
+            (reference_df['BeaconID'] == sequence_number)
         ]
 
         if not match.empty:
@@ -91,7 +133,6 @@ def process_file(input_file_path, reference_file_path):
 
     return input_df
 
-# Função para processar múltiplos arquivos
 def process_multiple_files(input_folder, output_folder, reference_folder):
     # Iterar sobre todos os arquivos no diretório de entrada
     for input_file_name in os.listdir(input_folder):
@@ -104,14 +145,25 @@ def process_multiple_files(input_folder, output_folder, reference_folder):
                 print(f"Arquivo de referência não encontrado para: {input_file_name}")
                 continue
 
-            # Processar o arquivo
-            processed_df = process_file(input_file_path, reference_file_path)
+            try:
+                # Processar o arquivo
+                processed_df = process_file(input_file_path, reference_file_path)
 
-            # Salvar o arquivo processado no diretório de saída
-            output_file_name = input_file_name.replace(".txt", ".csv")
-            output_file_path = os.path.join(output_folder, output_file_name)
-            processed_df.to_csv(output_file_path, index=False)
-            print(f"Arquivo processado e salvo: {output_file_path}")
+                # Salvar o arquivo processado no diretório de saída
+                output_file_name = input_file_name.replace(".txt", ".csv")
+                output_file_path = os.path.join(output_folder, output_file_name)
+                processed_df.to_csv(output_file_path, index=False)
+                print(f"Arquivo processado e salvo: {output_file_path}")
+
+            except pd.errors.ParserError as e:
+                # Capturar erros de parsing e pular o arquivo
+                print(f"Erro ao processar o arquivo {input_file_name}: {e}")
+                continue
+
+            except Exception as e:
+                # Capturar outros erros e pular o arquivo
+                print(f"Erro inesperado ao processar o arquivo {input_file_name}: {e}")
+                continue
 
 # Exemplo de uso
 reference_folder = "0. Dataset/0. Calibration/Data"  # Substitua pelo caminho da pasta de entrada
