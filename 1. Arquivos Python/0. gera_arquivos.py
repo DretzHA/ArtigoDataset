@@ -44,8 +44,16 @@ def find_reference_file(input_file_name, reference_folder):
     return None
 
 def process_file(input_file_path, reference_file_path):
-    # Ler o arquivo de entrada (TXT) sem atribuir nomes às colunas
-    input_df = pd.read_csv(input_file_path, header=None, on_bad_lines='skip')
+    # Definir o número máximo de colunas esperadas no arquivo de entrada
+    max_columns = 692  # Ajuste este valor conforme necessário
+
+    # Ler o arquivo de entrada (TXT) com o número máximo de colunas esperado
+    input_df = pd.read_csv(input_file_path, header=None, names=range(max_columns))
+    # input_df = pd.read_csv(input_file_path, header=None)
+
+
+    # Preencher valores ausentes com NaN
+    input_df.fillna(float('nan'), inplace=True)
 
     # Índice inicial das colunas de IQ
     iq_start_index = 24  # Começa na coluna 24
@@ -149,9 +157,11 @@ def process_multiple_files(input_folder, output_folder, reference_folder):
                 # Processar o arquivo
                 processed_df = process_file(input_file_path, reference_file_path)
 
+                # Usar o nome do arquivo de referência para o arquivo de saída
+                reference_file_name = os.path.basename(reference_file_path).replace(".csv", ".csv")
+                output_file_path = os.path.join(output_folder, reference_file_name)
+
                 # Salvar o arquivo processado no diretório de saída
-                output_file_name = input_file_name.replace(".txt", ".csv")
-                output_file_path = os.path.join(output_folder, output_file_name)
                 processed_df.to_csv(output_file_path, index=False)
                 print(f"Arquivo processado e salvo: {output_file_path}")
 

@@ -7,7 +7,7 @@ import seaborn as sns
 '''Arquivo para processar e analisar a perda dos pacotes do Dataset'''
 
 #Escolher Cenário - calibration | static | mobility
-cenario = 'static'
+cenario = 'calibration'
 
 # Total esperado de pacotes
 total_esperado = 181
@@ -50,14 +50,14 @@ if cenario not in cenario_to_folder:
     raise ValueError(f"Cenário inválido: {cenario}. Escolha entre: {', '.join(cenario_to_folder.keys())}")
 
 # Caminho base para os datasets
-base_path = '/home/andrey/Desktop/ANDREY/Pesquisa/ArtigoDataset/0. Dataset'
+base_path = '0. Dataset'
 
 # Construir o caminho da pasta correspondente ao cenário
 cenario_folder = cenario_to_folder[cenario]
 cenario_path = os.path.join(base_path, cenario_folder)
 
 # Caminhos das pastas Data e PeriodicSync
-data_path = os.path.join(cenario_path, 'Data')
+data_path = os.path.join(cenario_path, 'Data IQ')
 periodic_sync_path = os.path.join(cenario_path, 'PeriodicSync')
 
 # Listar arquivos nas pastas
@@ -66,7 +66,7 @@ periodic_sync_files = sorted([f for f in os.listdir(periodic_sync_path) if f.end
 
 # Verificar se os arquivos possuem os mesmos nomes
 if data_files != periodic_sync_files:
-    raise ValueError("Os arquivos nas pastas 'Data' e 'PeriodicSync' não correspondem.")
+    raise ValueError("Os arquivos nas pastas 'Data IQ' e 'PeriodicSync' não correspondem.")
 
 # Processar cada arquivo correspondente
 results = []
@@ -158,23 +158,23 @@ plt.tight_layout()
 plt.show()
 
 '''Heatmap de Perda de Pacotes'''
-# # Criar uma tabela pivot para o heatmap de RSSI (por arquivo de teste)
-# heatmap_rssi = results_df.pivot_table(
-#     values='rssi_loss_percentage',
-#     index='file_name',
-#     columns='anchor',
-#     aggfunc='mean'
-# )
+# Criar uma tabela pivot para o heatmap de RSSI (por arquivo de teste)
+heatmap_rssi = results_df.pivot_table(
+    values='rssi_loss_percentage',
+    index='file_name',
+    columns='anchor',
+    aggfunc='mean'
+)
 
-# # Criar o heatmap para RSSI
-# plt.figure(figsize=(12, 8))
-# sns.heatmap(heatmap_rssi, annot=True, cmap='coolwarm', fmt=".1f", cbar_kws={'label': 'Porcentagem de Perda (%)'})
-# plt.title('Heatmap de Perda de Pacotes (RSSI) por Arquivo de Teste')
-# plt.xlabel('Âncora')
-# plt.ylabel('Arquivo de Teste')
-# plt.xticks(rotation=45)
-# plt.tight_layout()
-# plt.show()
+# Criar o heatmap para RSSI
+plt.figure(figsize=(12, 8))
+sns.heatmap(heatmap_rssi, annot=True, cmap='coolwarm', fmt=".1f", cbar_kws={'label': 'Porcentagem de Perda (%)'})
+plt.title('Heatmap de Perda de Pacotes (RSSI) por Arquivo de Teste')
+plt.xlabel('Âncora')
+plt.ylabel('Arquivo de Teste')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
 
 # # Criar uma tabela pivot para o heatmap de PeriodicSync (por arquivo de teste)
 # heatmap_periodic_sync = results_df.pivot_table(
