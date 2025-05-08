@@ -64,6 +64,10 @@ periodic_sync_path = os.path.join(cenario_path, 'PeriodicSync')
 data_files = sorted([f for f in os.listdir(data_path) if f.endswith('.csv')])
 periodic_sync_files = sorted([f for f in os.listdir(periodic_sync_path) if f.endswith('.csv')])
 
+# Filtrar arquivos que não começam com "ORT"
+data_files = [f for f in data_files if not f.startswith('ORT')]
+periodic_sync_files = [f for f in periodic_sync_files if not f.startswith('ORT')]
+
 # Verificar se os arquivos possuem os mesmos nomes
 if data_files != periodic_sync_files:
     raise ValueError("Os arquivos nas pastas 'Data IQ' e 'PeriodicSync' não correspondem.")
@@ -114,45 +118,46 @@ for result in results:
 # Converter os resultados em um DataFrame
 results_df = pd.DataFrame(results)
 
-# # Exibir os resultados
-# print(results_df)
-
 # Substituir os nomes das âncoras pelos números correspondentes no DataFrame
 results_df['anchor'] = results_df['anchor'].map(anchor_mapping)
 
-# Gráfico de barras para perda de pacotes por âncora
-results_df.groupby('anchor')[['rssi_loss_percentage', 'periodic_sync_loss_percentage']].mean().plot(
+# Gráfico de barras para perda de pacotes por âncora (RSSI e PeriodicSync)
+loss_data = results_df.groupby('anchor')[['rssi_loss_percentage', 'periodic_sync_loss_percentage']].mean()
+loss_data.plot(
     kind='bar', figsize=(10, 6), title='Perda de Pacotes por Âncora'
 )
 plt.xlabel('Âncora')
 plt.ylabel('Porcentagem de Perda (%)')
 plt.show()
 
-# Criar subplots para os dois gráficoS
-fig, axes = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
- 
-# Gráfico de linhas para perda de pacotes por arquivo (RSSI)
-for anchor in results_df['anchor'].unique():
-    anchor_data = results_df[results_df['anchor'] == anchor]
-    axes[0].plot(anchor_data['file_name'], anchor_data['rssi_loss_percentage'], label=f'RSSI Loss - Anchor {anchor}')
+# Gráfico de barras para perda de pacotes por arquivo e âncora (RSSI)
+rssi_loss_data = results_df.pivot_table(
+    values='rssi_loss_percentage',
+    index='file_name',
+    columns='anchor',
+    aggfunc='mean'
+)
+rssi_loss_data.plot(
+    kind='bar', figsize=(12, 8), title='Perda de Pacotes (RSSI) por Arquivo e Âncora'
+)
+plt.xlabel('Arquivo')
+plt.ylabel('Porcentagem de Perda (%)')
+plt.xticks(rotation=90)
+plt.tight_layout()
+plt.show()
 
-axes[0].set_title('Perda de Pacotes (RSSI) por Arquivo e Âncora')
-axes[0].set_ylabel('Porcentagem de Perda (%)')
-axes[0].legend()
-axes[0].grid(True)
-
-# Gráfico de linhas para perda de pacotes por arquivo (PeriodicSync)
-for anchor in results_df['anchor'].unique():
-    anchor_data = results_df[results_df['anchor'] == anchor]
-    axes[1].plot(anchor_data['file_name'], anchor_data['periodic_sync_loss_percentage'], label=f'PeriodicSync Loss - Anchor {anchor}')
-
-axes[1].set_title('Perda de Pacotes (PeriodicSync) por Arquivo e Âncora')
-axes[1].set_ylabel('Porcentagem de Perda (%)')
-axes[1].set_xlabel('Arquivo')
-axes[1].legend()
-axes[1].grid(True)
-
-# Ajustar layout e exibir os gráficos
+# Gráfico de barras para perda de pacotes por arquivo e âncora (PeriodicSync)
+periodic_sync_loss_data = results_df.pivot_table(
+    values='periodic_sync_loss_percentage',
+    index='file_name',
+    columns='anchor',
+    aggfunc='mean'
+)
+periodic_sync_loss_data.plot(
+    kind='bar', figsize=(12, 8), title='Perda de Pacotes (PeriodicSync) por Arquivo e Âncora'
+)
+plt.xlabel('Arquivo')
+plt.ylabel('Porcentagem de Perda (%)')
 plt.xticks(rotation=90)
 plt.tight_layout()
 plt.show()
@@ -231,7 +236,7 @@ for fig_idx in range(num_figures):
             data_file_path = os.path.join(data_path, file_name)
             data_df = pd.read_csv(data_file_path)
             test_position = data_df[data_df['ppeID'] == row['ppe_id']][['X_real', 'Y_real']].iloc[0]
-            x_real, y_real = test_position['X_real'], test_position['Y_real']
+            x_real, y_real = test_position['X_real'], 'Y_real'
             
             # Obter as perdas de pacotes
             rssi_loss = row['rssi_loss_percentage']
