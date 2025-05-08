@@ -128,7 +128,7 @@ def process_file(input_file_path, reference_file_path):
 
         if not match.empty:
             # Adicionar os valores de Azim_5 e Azim_6
-            input_df.at[index, 'Azim_5'] = match['Azim_5'].values[0]
+            input_df.at[index, 'Azim_7'] = match['Azim_7'].values[0]
             input_df.at[index, 'Azim_6'] = match['Azim_6'].values[0]
 
             # Substituir as colunas de coordenadas
@@ -138,7 +138,18 @@ def process_file(input_file_path, reference_file_path):
             input_df.at[index, 'X_real'] = match['X_real'].values[0]
             input_df.at[index, 'Y_real'] = match['Y_real'].values[0]
             input_df.at[index, 'Z_real'] = match['Z_real'].values[0]
+        
+        # Supondo que Azim_5 já exista no input_df
+        colunas = list(input_df.columns)
+        # Posição onde Azim_6 e Azim_7 devem ser inseridas (logo após Azim_5)
+        pos = colunas.index('Azim_5') + 1
 
+        # Insere Azim_6 e Azim_7 na posição correta
+        colunas[pos:pos] = ['Azim_6', 'Azim_7']
+
+        # Reordena o DataFrame
+        input_df = input_df[colunas]
+        
     return input_df
 
 def process_multiple_files(input_folder, output_folder, reference_folder):
@@ -176,8 +187,8 @@ def process_multiple_files(input_folder, output_folder, reference_folder):
                 continue
 
 # Exemplo de uso
-reference_folder = "0. Dataset/0. Calibration/Data"  # Substitua pelo caminho da pasta de entrada
-output_folder = "0. Dataset/0. Calibration/Data IQ"  # Substitua pelo caminho da pasta de saída
-input_folder = "0. Dataset/99. Dados DB/Com Amostras IQ/0. Calibration"  # Substitua pelo caminho da pasta de referência
+reference_folder = "0. Dataset/1. Static/Data"  # Substitua pelo caminho da pasta de entrada
+output_folder = "0. Dataset/1. Static/Data IQ"  # Substitua pelo caminho da pasta de saída
+input_folder = "0. Dataset/99. Dados DB/Com Amostras IQ/1. Static"  # Substitua pelo caminho da pasta de referência
 
 process_multiple_files(input_folder, output_folder, reference_folder)
