@@ -139,16 +139,23 @@ def process_file(input_file_path, reference_file_path):
             input_df.at[index, 'Y_real'] = match['Y_real'].values[0]
             input_df.at[index, 'Z_real'] = match['Z_real'].values[0]
         
-        # Supondo que Azim_5 já exista no input_df
-        colunas = list(input_df.columns)
-        # Posição onde Azim_6 e Azim_7 devem ser inseridas (logo após Azim_5)
-        pos = colunas.index('Azim_5') + 1
+    # Supondo que Azim_5 já exista no input_df
+    colunas = list(input_df.columns)
 
-        # Insere Azim_6 e Azim_7 na posição correta
-        colunas[pos:pos] = ['Azim_6', 'Azim_7']
+    # Garante que Azim_6 e Azim_7 estão na lista apenas uma vez
+    for col in ['Azim_6', 'Azim_7']:
+        if col in colunas:
+            colunas.remove(col)
 
-        # Reordena o DataFrame
-        input_df = input_df[colunas]
+    # Posição onde Azim_6 e Azim_7 devem ser inseridas (logo após Azim_5)
+    pos = colunas.index('Azim_5') + 1
+
+    # Insere Azim_6 e Azim_7 na posição correta
+    colunas[pos:pos] = ['Azim_6', 'Azim_7']
+
+    # Reordena o DataFrame
+    input_df = input_df[colunas]
+
         
     return input_df
 
@@ -187,8 +194,8 @@ def process_multiple_files(input_folder, output_folder, reference_folder):
                 continue
 
 # Exemplo de uso
-reference_folder = "0. Dataset/1. Static/Data"  # Substitua pelo caminho da pasta de entrada
-output_folder = "0. Dataset/1. Static/Data IQ"  # Substitua pelo caminho da pasta de saída
-input_folder = "0. Dataset/99. Dados DB/Com Amostras IQ/1. Static"  # Substitua pelo caminho da pasta de referência
+reference_folder = "0. Dataset/2. Mobility/Data"  # Substitua pelo caminho da pasta de entrada
+output_folder = "0. Dataset/2. Mobility/Data IQ"  # Substitua pelo caminho da pasta de saída
+input_folder = "0. Dataset/99. Dados DB/Com Amostras IQ/2. Mobility"  # Substitua pelo caminho da pasta de referência
 
 process_multiple_files(input_folder, output_folder, reference_folder)
