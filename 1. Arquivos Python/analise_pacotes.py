@@ -236,18 +236,16 @@ for fig_idx in range(num_figures):
             data_file_path = os.path.join(data_path, file_name)
             data_df = pd.read_csv(data_file_path)
             test_position = data_df[data_df['ppeID'] == row['ppe_id']][['X_real', 'Y_real']].iloc[0]
-            x_real, y_real = test_position['X_real'], 'Y_real'
+            x_real, y_real = test_position['X_real'], test_position['Y_real']
             
-            # Obter as perdas de pacotes
+            # Obter a perda de pacotes do RSSI
             rssi_loss = row['rssi_loss_percentage']
-            periodic_sync_loss = row['periodic_sync_loss_percentage']
             
             # Plotar a posição do teste
             ax.scatter(x_real, y_real, color='blue', marker='o', s=50, alpha=0.6)
             
-            # Adicionar texto com as perdas de pacotes
-            ax.text(x_real, y_real - 0.2, f'RSSI: {rssi_loss:.1f}%', fontsize=8, color='blue', ha='center')
-            ax.text(x_real, y_real - 0.4, f'PSync: {periodic_sync_loss:.1f}%', fontsize=8, color='green', ha='center')
+            # Adicionar texto com a perda de pacotes do RSSI
+            ax.text(x_real, y_real - 0.2, f' {rssi_loss:.1f}%', fontsize=8, color='blue', ha='center')
         
         # Configurações do subplot
         ax.set_title(f"Anchor A{anchor}")
