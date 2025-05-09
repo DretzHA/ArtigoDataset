@@ -20,8 +20,8 @@ considerar_arquivos = {
     "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
-    "4T": True,
-    "3T": False,
+    "4T": False,
+    "3T": True,
     "OUTROS": False
 }
 
