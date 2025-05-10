@@ -21,8 +21,8 @@ considerar_arquivos = {
     "SYLABS": False,
     "UBLOX": False,
     "4T": False,
-    "3T": True,
-    "OUTROS": False
+    "3T": False,
+    "OUTROS": True
 }
 
 # Variáveis para definir quais gráficos serão plotados
@@ -129,13 +129,13 @@ def calcular_perda_nao_processados(cenario):
         for ppe_id in ppe_ids:
             data_filtered = data_df[data_df['ppeID'] == ppe_id]
             for anchor, rssi_index in anchor_mapping.items():
-                rssi_column = f'RSSI_{rssi_index}'
-                rssi_count = data_filtered[rssi_column].notnull().sum()
+                azim_column = f'Azim_{rssi_index}'
+                azim_count = data_filtered[azim_column].notnull().sum()
                 results.append({
                     'file_name': file_name,
                     'ppe_id': ppe_id,
                     'anchor': anchor,
-                    'nao_processados_count': rssi_count
+                    'nao_processados_count': azim_count
                 })
 
     for result in results:
@@ -391,43 +391,45 @@ if plotar_graficos["nao_recebidos_por_arquivo"]:
     plt.show()
 
 '''Heatmap de Perda de Pacotes'''
-# Criar uma tabela pivot para o heatmap de Não Processados (por arquivo de teste)
+# Criar uma tabela pivot para o heatmap de Não Processados (por arquivo de teste) para cada ppeID
 if plotar_graficos["heatmap_nao_processados"]:
-    heatmap_nao_processados = results_nao_processados_df.pivot_table(
-        values='nao_processados_loss_percentage',
-        index='file_name',
-        columns='anchor',
-        aggfunc='mean'
-    )
+    for ppe_id in results_nao_processados_df['ppe_id'].unique():
+        heatmap_nao_processados = results_nao_processados_df[results_nao_processados_df['ppe_id'] == ppe_id].pivot_table(
+            values='nao_processados_loss_percentage',
+            index='file_name',
+            columns='anchor',
+            aggfunc='mean'
+        )
 
-    # Criar o heatmap para Não Processados
-    plt.figure(figsize=(12, 8))
-    sns.heatmap(heatmap_nao_processados, annot=True, cmap='coolwarm', fmt=".1f", cbar_kws={'label': 'Porcentagem de Perda (%)'})
-    plt.title('Heatmap de Perda de Pacotes (Não Processados) por Arquivo de Teste')
-    plt.xlabel('Âncora')
-    plt.ylabel('Arquivo de Teste')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.show()
+        # Criar o heatmap para Não Processados
+        plt.figure(figsize=(12, 8))
+        sns.heatmap(heatmap_nao_processados, annot=True, cmap='coolwarm', fmt=".1f", cbar_kws={'label': 'Porcentagem de Perda (%)'})
+        plt.title(f'Heatmap de Perda de Pacotes (Não Processados) por Arquivo de Teste - PPE_ID: {ppe_id}')
+        plt.xlabel('Âncora')
+        plt.ylabel('Arquivo de Teste')
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
 
-# Criar uma tabela pivot para o heatmap de Não Recebidos (por arquivo de teste)
+# Criar uma tabela pivot para o heatmap de Não Recebidos (por arquivo de teste) para cada ppeID
 if plotar_graficos["heatmap_nao_recebidos"]:
-    heatmap_periodic_sync = results_nao_recebidos_df.pivot_table(
-        values='nao_recebidos_loss_percentage',
-        index='file_name',
-        columns='anchor',
-        aggfunc='mean'
-    )
+    for ppe_id in results_nao_recebidos_df['ppe_id'].unique():
+        heatmap_periodic_sync = results_nao_recebidos_df[results_nao_recebidos_df['ppe_id'] == ppe_id].pivot_table(
+            values='nao_recebidos_loss_percentage',
+            index='file_name',
+            columns='anchor',
+            aggfunc='mean'
+        )
 
-    # Criar o heatmap para Não Recebidos
-    plt.figure(figsize=(12, 8))
-    sns.heatmap(heatmap_periodic_sync, annot=True, cmap='coolwarm', fmt=".1f", cbar_kws={'label': 'Porcentagem de Perda (%)'})
-    plt.title('Heatmap de Perda de Pacotes (Não Recebidos) por Arquivo de Teste')
-    plt.xlabel('Âncora')
-    plt.ylabel('Arquivo de Teste')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.show()
+        # Criar o heatmap para Não Recebidos
+        plt.figure(figsize=(12, 8))
+        sns.heatmap(heatmap_periodic_sync, annot=True, cmap='coolwarm', fmt=".1f", cbar_kws={'label': 'Porcentagem de Perda (%)'})
+        plt.title(f'Heatmap de Perda de Pacotes (Não Recebidos) por Arquivo de Teste - PPE_ID: {ppe_id}')
+        plt.xlabel('Âncora')
+        plt.ylabel('Arquivo de Teste')
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
 
 '''Gráfico espacial'''
 # Gráfico espacial para Não Processados
