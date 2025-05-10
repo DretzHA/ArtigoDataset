@@ -7,7 +7,7 @@ import seaborn as sns
 '''Arquivo para processar e analisar a perda dos pacotes do Dataset'''
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'calibration'
+cenario = 'static'
 
 # Total esperado de pacotes
 total_esperado = 181
@@ -86,16 +86,21 @@ base_path = '0. Dataset'
 # Função para filtrar arquivos com base na variável considerar_arquivos
 def filtrar_arquivos(data_files):
     # Filtrar arquivos específicos
-    if not considerar_arquivos["ORT"]:
-        data_files = [f for f in data_files if not f.startswith('ORT')]
-    if not considerar_arquivos["SYLABS"]:
-        data_files = [f for f in data_files if 'SYLABS' not in f]
-    if not considerar_arquivos["UBLOX"]:
-        data_files = [f for f in data_files if 'UBLOX' not in f]
-    if not considerar_arquivos["4T"]:
-        data_files = [f for f in data_files if '4T' not in f]
-    if not considerar_arquivos["3T"]:
-        data_files = [f for f in data_files if '3T' not in f]
+    if considerar_arquivos["ORT"] and not considerar_arquivos["4T"]:
+        data_files = [f for f in data_files if f.startswith('ORT')]
+    elif not considerar_arquivos["ORT"] and considerar_arquivos["4T"]:
+        data_files = [f for f in data_files if '4T' in f and not f.startswith('ORT')]
+    else:
+        if not considerar_arquivos["ORT"]:
+            data_files = [f for f in data_files if not f.startswith('ORT')]
+        if not considerar_arquivos["SYLABS"]:
+            data_files = [f for f in data_files if 'SYLABS' not in f]
+        if not considerar_arquivos["UBLOX"]:
+            data_files = [f for f in data_files if 'UBLOX' not in f]
+        if not considerar_arquivos["4T"]:
+            data_files = [f for f in data_files if '4T' not in f]
+        if not considerar_arquivos["3T"]:
+            data_files = [f for f in data_files if '3T' not in f]
     
     # Excluir arquivos "OUTROS" se considerar_arquivos["OUTROS"] for False
     if not considerar_arquivos["OUTROS"]:
@@ -125,6 +130,8 @@ def calcular_perda_nao_processados(cenario):
         data_file_path = os.path.join(data_path, file_name)
         data_df = pd.read_csv(data_file_path)
         ppe_ids = data_df['ppeID'].unique()
+        # if len(ppe_ids) == 4:
+        #     print()
 
         for ppe_id in ppe_ids:
             data_filtered = data_df[data_df['ppeID'] == ppe_id]
