@@ -7,7 +7,7 @@ import seaborn as sns
 '''Arquivo para processar e analisar a perda dos pacotes do Dataset'''
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'static'
+cenario = 'mobility'
 
 # Total esperado de pacotes
 total_esperado = 181
@@ -17,12 +17,12 @@ por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela
 
 # Variável para escolher se arquivos específicos serão considerados
 considerar_arquivos = {
-    "ORT": False,
+    "ORT": True,
     "SYLABS": False,
     "UBLOX": False,
     "4T": False,
     "3T": False,
-    "OUTROS": True
+    "OUTROS": False
 }
 
 # Variáveis para definir quais gráficos serão plotados
@@ -33,8 +33,8 @@ plotar_graficos = {
     "nao_recebidos_por_arquivo": True,
     "heatmap_nao_processados": True,
     "heatmap_nao_recebidos": True,
-    "grafico_espacial_nao_processados": True,
-    "grafico_espacial_nao_recebidos": True
+    "grafico_espacial_nao_processados": False,
+    "grafico_espacial_nao_recebidos": False
 }
 
 
@@ -130,8 +130,14 @@ def calcular_perda_nao_processados(cenario):
         data_file_path = os.path.join(data_path, file_name)
         data_df = pd.read_csv(data_file_path)
         ppe_ids = data_df['ppeID'].unique()
-        # if len(ppe_ids) == 4:
-        #     print()
+
+        # Determinar o total esperado para o cenário mobility
+        if cenario == 'mobility':
+            min_time = data_df['CreateTime'].min()
+            max_time = data_df['CreateTime'].max()
+            total_esperado = max_time - min_time
+        else:
+            total_esperado = 181  # Valor fixo para calibration e static
 
         for ppe_id in ppe_ids:
             data_filtered = data_df[data_df['ppeID'] == ppe_id]
@@ -142,11 +148,12 @@ def calcular_perda_nao_processados(cenario):
                     'file_name': file_name,
                     'ppe_id': ppe_id,
                     'anchor': anchor,
-                    'nao_processados_count': azim_count
+                    'nao_processados_count': azim_count,
+                    'total_esperado': total_esperado
                 })
 
     for result in results:
-        result['nao_processados_loss_percentage'] = max(0, ((total_esperado - result['nao_processados_count']) / total_esperado) * 100)
+        result['nao_processados_loss_percentage'] = max(0, ((result['total_esperado'] - result['nao_processados_count']) / result['total_esperado']) * 100)
 
     results_df = pd.DataFrame(results)
     results_df['anchor'] = results_df['anchor'].map(anchor_mapping)
@@ -173,15 +180,30 @@ def calcular_perda_nao_recebidos(cenario):
             periodic_sync_filtered = periodic_sync_df[periodic_sync_df['ppe_id'] == ppe_id]
             for anchor in anchor_mapping.keys():
                 periodic_sync_count = periodic_sync_filtered[periodic_sync_filtered['anchor_id'] == anchor].shape[0]
+
+                # Verificar se o filtro retorna algum resultado
+                filtered_result = results_nao_processados_df[
+                    (results_nao_processados_df['file_name'] == file_name) &
+                    (results_nao_processados_df['ppe_id'] == ppe_id) &
+                    (results_nao_processados_df['anchor'] == anchor_mapping[anchor])
+                ]
+
+                if not filtered_result.empty:
+                    total_esperado = filtered_result['total_esperado'].iloc[0]
+                else:
+                    # Definir um valor padrão ou lidar com o caso de ausência de dados
+                    total_esperado = 0  # Ou outro valor apropriado
+
                 results.append({
                     'file_name': file_name,
                     'ppe_id': ppe_id,
                     'anchor': anchor,
-                    'nao_recebidos_count': periodic_sync_count
+                    'nao_recebidos_count': periodic_sync_count,
+                    'total_esperado': total_esperado
                 })
 
     for result in results:
-        result['nao_recebidos_loss_percentage'] = max(0, ((total_esperado - result['nao_recebidos_count']) / total_esperado) * 100)
+        result['nao_recebidos_loss_percentage'] = max(0, ((result['total_esperado'] - result['nao_recebidos_count']) / result['total_esperado']) * 100)
 
     results_df = pd.DataFrame(results)
     results_df['anchor'] = results_df['anchor'].map(anchor_mapping)
@@ -258,12 +280,18 @@ def gerar_grafico_espacial_por_ppe(results_df, data_path, tipo, ppe_id=None):
             
             # Plotar as posições dos testes e sobrepor as perdas de pacotes
             for _, row in anchor_results.iterrows():
+                # Criar uma lista para salvar todas as posições de teste e reais
+                test_positions = []
+
                 # Obter a posição do teste
                 file_name = row['file_name']
                 data_file_path = os.path.join(data_path, file_name)
                 data_df = pd.read_csv(data_file_path)
                 test_position = data_df[data_df['ppeID'] == row['ppe_id']][['X_real', 'Y_real']].iloc[0]
                 x_real, y_real = test_position['X_real'], test_position['Y_real']
+
+                # Adicionar a posição à lista para debug
+                test_positions.append({'file_name': file_name, 'ppe_id': row['ppe_id'], 'x_real': x_real, 'y_real': y_real})
                 
                 # Obter a perda de pacotes
                 if tipo == 'nao_processados':
