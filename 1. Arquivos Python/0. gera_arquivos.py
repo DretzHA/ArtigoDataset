@@ -8,7 +8,9 @@ ppeid_mapping = {
     "1d5ab4ef-0f65-dd99-0b6e-312f5d6add59": "ble-pd-B43A31EF7B26",
     "9c071f5d-0b8f-e641-6d63-2e3e3c3d7179": "ble-pd-B43A31EB2289",
     "4ecede9a-77ff-0ac2-8fa7-335dd98ec107": "ble-pd-B43A31EB228D",
-    "d500a44f-2051-d64b-3d63-8985cc792954": "ble-pd-B43A31EF7527"
+    "d500a44f-2051-d64b-3d63-8985cc792954": "ble-pd-B43A31EF7527",
+    "72828ff7-3ccc-0c5d-596b-8331ba7d4f39": "ble-pd-588E816309D5",
+    "06780f4f-6290-09ab-e100-b5f75079c352": "ble-pd-B43A31EF7B34"
 
 }
 
@@ -196,57 +198,57 @@ def process_multiple_files(input_folder, output_folder, reference_folder):
 # Exemplo de uso
 reference_folder = "0. Dataset/1. Static/Data"  # Substitua pelo caminho da pasta de entrada
 output_folder = "0. Dataset/1. Static/Data IQ"  # Substitua pelo caminho da pasta de saída
-input_folder = "0. Dataset/99. Dados DB/Com Amostras IQ/2. Mobility"  # Substitua pelo caminho da pasta de referência
+input_folder = "0. Dataset/99. Dados DB/Com Amostras IQ/1. Static"  # Substitua pelo caminho da pasta de referência
 
-#process_multiple_files(input_folder, output_folder, reference_folder)
+process_multiple_files(input_folder, output_folder, reference_folder)
 
-# Adicionar Azim_6 e Azim_7 ao arquivo STC_C1P1_4T_data.csv na pasta Data IQ
-specific_file_name = "STC_C1P1_4T_data.csv"
+# # Adicionar Azim_6 e Azim_7 ao arquivo STC_C1P1_4T_data.csv na pasta Data IQ
+# specific_file_name = "STC_C1P1_4T_data.csv"
 
-# Caminhos para o arquivo de referência e o arquivo processado
-reference_file_path = os.path.join(reference_folder, specific_file_name)
-output_file_path = os.path.join(output_folder, specific_file_name)
+# # Caminhos para o arquivo de referência e o arquivo processado
+# reference_file_path = os.path.join(reference_folder, specific_file_name)
+# output_file_path = os.path.join(output_folder, specific_file_name)
 
-if os.path.exists(reference_file_path) and os.path.exists(output_file_path):
-    # Ler os arquivos
-    reference_df = pd.read_csv(reference_file_path)
-    output_df = pd.read_csv(output_file_path)
+# if os.path.exists(reference_file_path) and os.path.exists(output_file_path):
+#     # Ler os arquivos
+#     reference_df = pd.read_csv(reference_file_path)
+#     output_df = pd.read_csv(output_file_path)
 
-    # Iterar sobre as linhas do arquivo processado
-    for index, row in output_df.iterrows():
-        ppe_id = row['ppeID']
-        sequence_number = row['Sequence_number']
+#     # Iterar sobre as linhas do arquivo processado
+#     for index, row in output_df.iterrows():
+#         ppe_id = row['ppeID']
+#         sequence_number = row['Sequence_number']
 
-        # Filtrar o DataFrame de referência para encontrar os valores correspondentes
-        match = reference_df[
-            (reference_df['ppeID'] == ppe_id) &
-            (reference_df['BeaconID'] == sequence_number)
-        ]
+#         # Filtrar o DataFrame de referência para encontrar os valores correspondentes
+#         match = reference_df[
+#             (reference_df['ppeID'] == ppe_id) &
+#             (reference_df['BeaconID'] == sequence_number)
+#         ]
 
-        if not match.empty:
-            # Adicionar os valores de Azim_6 e Azim_7
-            output_df.at[index, 'Azim_6'] = match['Azim_6'].values[0]
-            output_df.at[index, 'Azim_7'] = match['Azim_7'].values[0]
+#         if not match.empty:
+#             # Adicionar os valores de Azim_6 e Azim_7
+#             output_df.at[index, 'Azim_6'] = match['Azim_6'].values[0]
+#             output_df.at[index, 'Azim_7'] = match['Azim_7'].values[0]
 
-            # Substituir as colunas de coordenadas
-            output_df.at[index, 'X_sylabs'] = match['X_sylabs'].values[0]
-            output_df.at[index, 'Y_sylabs'] = match['Y_sylabs'].values[0]
-            output_df.at[index, 'Z_sylabs'] = match['Z_sylabs'].values[0]
-            output_df.at[index, 'X_real'] = match['X_real'].values[0]
-            output_df.at[index, 'Y_real'] = match['Y_real'].values[0]
-            output_df.at[index, 'Z_real'] = match['Z_real'].values[0]
+#             # Substituir as colunas de coordenadas
+#             output_df.at[index, 'X_sylabs'] = match['X_sylabs'].values[0]
+#             output_df.at[index, 'Y_sylabs'] = match['Y_sylabs'].values[0]
+#             output_df.at[index, 'Z_sylabs'] = match['Z_sylabs'].values[0]
+#             output_df.at[index, 'X_real'] = match['X_real'].values[0]
+#             output_df.at[index, 'Y_real'] = match['Y_real'].values[0]
+#             output_df.at[index, 'Z_real'] = match['Z_real'].values[0]
 
-    # Reordenar as colunas para que Azim_6 e Azim_7 fiquem ao lado de Azim_5
-    colunas = list(output_df.columns)
-    for col in ['Azim_6', 'Azim_7']:
-        if col in colunas:
-            colunas.remove(col)
-    pos = colunas.index('Azim_5') + 1
-    colunas[pos:pos] = ['Azim_6', 'Azim_7']
-    output_df = output_df[colunas]
+#     # Reordenar as colunas para que Azim_6 e Azim_7 fiquem ao lado de Azim_5
+#     colunas = list(output_df.columns)
+#     for col in ['Azim_6', 'Azim_7']:
+#         if col in colunas:
+#             colunas.remove(col)
+#     pos = colunas.index('Azim_5') + 1
+#     colunas[pos:pos] = ['Azim_6', 'Azim_7']
+#     output_df = output_df[colunas]
 
-    # Salvar o arquivo atualizado
-    output_df.to_csv(output_file_path, index=False)
-    print(f"Colunas Azim_6, Azim_7 e coordenadas adicionadas e reordenadas em: {output_file_path}")
-else:
-    print(f"Arquivo de referência ou processado não encontrado para: {specific_file_name}")
+#     # Salvar o arquivo atualizado
+#     output_df.to_csv(output_file_path, index=False)
+#     print(f"Colunas Azim_6, Azim_7 e coordenadas adicionadas e reordenadas em: {output_file_path}")
+# else:
+#     print(f"Arquivo de referência ou processado não encontrado para: {specific_file_name}")
