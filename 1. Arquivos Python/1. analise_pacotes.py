@@ -7,7 +7,7 @@ import seaborn as sns
 '''Arquivo para processar e analisar a perda dos pacotes do Dataset'''
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'mobility'
+cenario = 'static'
 
 # Total esperado de pacotes
 total_esperado = 181
@@ -17,10 +17,10 @@ por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela
 
 # Variável para escolher se arquivos específicos serão considerados
 considerar_arquivos = {
-    "ORT": True,
+    "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
-    "4T": False,
+    "4T": True,
     "3T": False,
     "OUTROS": False
 }
@@ -33,8 +33,8 @@ plotar_graficos = {
     "nao_recebidos_por_arquivo": True,
     "heatmap_nao_processados": True,
     "heatmap_nao_recebidos": True,
-    "grafico_espacial_nao_processados": False,
-    "grafico_espacial_nao_recebidos": False
+    "grafico_espacial_nao_processados": True,
+    "grafico_espacial_nao_recebidos": True
 }
 
 
@@ -114,6 +114,22 @@ def filtrar_arquivos(data_files):
     
     return data_files
 
+# Função para normalizar os ppeIDs
+def normalizar_ppe_ids(data_df):
+    ppe_id_map = {
+        'ble-pd-B43A31EF7B26': 'Capacete',
+        'ble-pd-588E816309D5': 'Camisa',
+        'ble-pd-B43A31EF7B34': 'Camisa',
+        'ble-pd-B34A31EF7527': 'Camisa',
+        'ble-pd-B43A31EB228D': 'Bota',
+        'ble-pd-B43A31EB2289': 'Calça',
+    }
+    if 'ppeID' in data_df.columns:
+        data_df['ppeID'] = data_df['ppeID'].replace(ppe_id_map)
+    elif 'ppe_id' in data_df.columns:
+        data_df['ppe_id'] = data_df['ppe_id'].replace(ppe_id_map)
+    return data_df
+
 # Função para calcular a perda de pacotes "Não Processados"
 def calcular_perda_nao_processados(cenario):
     # Construir o caminho da pasta correspondente ao cenário
@@ -129,6 +145,10 @@ def calcular_perda_nao_processados(cenario):
     for file_name in data_files:
         data_file_path = os.path.join(data_path, file_name)
         data_df = pd.read_csv(data_file_path)
+
+        # Normalizar os ppeIDs
+        data_df = normalizar_ppe_ids(data_df)
+
         ppe_ids = data_df['ppeID'].unique()
 
         # Determinar o total esperado para o cenário mobility
@@ -174,6 +194,10 @@ def calcular_perda_nao_recebidos(cenario):
     for file_name in periodic_sync_files:
         periodic_sync_file_path = os.path.join(periodic_sync_path, file_name)
         periodic_sync_df = pd.read_csv(periodic_sync_file_path)
+
+        # Normalizar os ppeIDs
+        periodic_sync_df = normalizar_ppe_ids(periodic_sync_df)
+
         ppe_ids = periodic_sync_df['ppe_id'].unique()
 
         for ppe_id in ppe_ids:
