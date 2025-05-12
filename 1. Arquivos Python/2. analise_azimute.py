@@ -9,7 +9,7 @@ import matplotlib.image as mpimg
 '''Arquivo para processar e analisar o erro do ângulo azimute'''
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'calibration'  # Cenário a ser analisado
+cenario = 'mobility'  # Cenário a ser analisado
 
 # Variável para definir se os gráficos e resultados serão feitos por cada tipo de ppe_id ou pela média
 por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela média
@@ -19,16 +19,16 @@ considerar_arquivos = {
     "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
-    "4T": False,
+    "4T": True,
     "3T": False,
-    "OUTROS": True
+    "OUTROS": False
 }
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
-    "erro_azimute_por_ancora": True,
-    "erro_azimute_por_arquivo": True,
-    "heatmap_erro_azimute": True,
+    "erro_azimute_por_ancora": False,
+    "erro_azimute_por_arquivo": False,
+    "heatmap_erro_azimute": False,
     "grafico_espacial_erro_azimute": True
 }
 
