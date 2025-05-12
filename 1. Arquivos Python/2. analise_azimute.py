@@ -26,9 +26,9 @@ considerar_arquivos = {
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
-    "erro_azimute_por_ancora": False,
-    "erro_azimute_por_arquivo": False,
-    "heatmap_erro_azimute": False,
+    "erro_azimute_por_ancora": True,
+    "erro_azimute_por_arquivo": True,
+    "heatmap_erro_azimute": True,
     "grafico_espacial_erro_azimute": True
 }
 
@@ -126,35 +126,35 @@ def normalizar_ppe_ids(data_df):
     return data_df
 
 # Função para calcular o ângulo real (vazia para edição posterior)
-def calcular_angulo_real(data_df, anchor_coords):
+def calcular_angulo_real(ppe_data, anchor_coords):
 
     # Extract real-world position
-    x_real, y_real = data_df["X_real"].iloc[0], data_df["Y_real"].iloc[0]
+    x_real, y_real = ppe_data["X_real"].iloc[0], ppe_data["Y_real"].iloc[0]
 
     # Iterate through each anchor to calculate the real azimuth
     for anchor_id, coords in anchor_coords.items():
         real_azimuth = np.arctan2(coords['y'] - y_real, x_real - coords['x'])
         # Save the calculated real azimuth in the dataframe
-        data_df[f'Real_Azim_{anchor_id}'] = real_azimuth
+        ppe_data[f'Real_Azim_{anchor_id}'] = real_azimuth
     
-    return data_df
+    return ppe_data
 
 # Função para calcular o erro do ângulo azimute
-def calcular_erro_azimute(data_df):
+def calcular_erro_azimute(ppe_data):
     # Iterar sobre cada âncora para calcular o erro do ângulo azimute
     for anchor_id in anchor_coords.keys():
         # Calcular a diferença angular entre o ângulo real e o ângulo medido
-        data_df[f'Erro_Azim_{anchor_id}'] = np.rad2deg(
+        ppe_data[f'Erro_Azim_{anchor_id}'] = np.rad2deg(
             np.arctan2(
-                np.sin(data_df[f'Real_Azim_{anchor_id}'] - data_df[f'Azim_{anchor_id}']),
-                np.cos(data_df[f'Real_Azim_{anchor_id}'] - data_df[f'Azim_{anchor_id}'])
+                np.sin(ppe_data[f'Real_Azim_{anchor_id}'] - ppe_data[f'Azim_{anchor_id}']),
+                np.cos(ppe_data[f'Real_Azim_{anchor_id}'] - ppe_data[f'Azim_{anchor_id}'])
             )
         )
         # Garantir que o erro esteja no intervalo [-180, 180]
-        data_df[f'Erro_Azim_{anchor_id}'] = (data_df[f'Erro_Azim_{anchor_id}'] + 180) % 360 - 180
-        data_df[f'Erro_Azim_{anchor_id}'] = abs(data_df[f'Erro_Azim_{anchor_id}'])
+        ppe_data[f'Erro_Azim_{anchor_id}'] = (ppe_data[f'Erro_Azim_{anchor_id}'] + 180) % 360 - 180
+        ppe_data[f'Erro_Azim_{anchor_id}'] = abs(ppe_data[f'Erro_Azim_{anchor_id}'])
     
-    return data_df
+    return ppe_data
 
 # Função para calcular o erro do ângulo azimute por cenário
 def calcular_erro_azimute_por_cenario(cenario):
@@ -177,7 +177,7 @@ def calcular_erro_azimute_por_cenario(cenario):
 
         # Iterar por ppe_id
         for ppe_id in data_df['ppeID'].unique():
-            ppe_data = data_df[data_df['ppeID'] == ppe_id]
+            ppe_data = data_df[data_df['ppeID'] == ppe_id].copy()
 
             # Calcular o ângulo real e o erro do azimute
             ppe_data = calcular_angulo_real(ppe_data, anchor_coords)
@@ -248,8 +248,6 @@ def gerar_heatmap(results_df):
 # Função para gerar gráfico espacial do erro médio do ângulo azimute
 def gerar_grafico_espacial_erro_azimute(results_df, data_path):
 
-    # Normalizar os ppeIDs no data_df
-    data_df = normalizar_ppe_ids(data_df)
     if por_ppe_id:
         # Gerar gráficos espaciais por ppe_id
         for ppe_id in results_df['ppe_id'].unique():
@@ -289,7 +287,8 @@ def gerar_grafico_espacial_erro_azimute(results_df, data_path):
                         file_name = row['file_name']
                         data_file_path = os.path.join(data_path, file_name)
                         data_df = pd.read_csv(data_file_path)
-                        
+                        # Normalizar os ppeIDs
+                        data_df = normalizar_ppe_ids(data_df)
                         # Obter a posição média do teste
                         test_position = data_df[data_df['ppeID'] == ppe_id][['X_real', 'Y_real']].iloc[0]
                         x_real, y_real = test_position['X_real'], test_position['Y_real']
@@ -314,6 +313,8 @@ def gerar_grafico_espacial_erro_azimute(results_df, data_path):
                 
                 # Ajustar layout e exibir a figura
                 plt.tight_layout()
+                if ppe_id:
+                    plt.suptitle(f'Gráfico Espacial - PPE_ID: {ppe_id}', fontsize=12)
                 plt.show()
 
 # Verificar se o cenário é válido
