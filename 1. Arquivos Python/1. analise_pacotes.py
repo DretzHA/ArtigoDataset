@@ -7,7 +7,7 @@ import seaborn as sns
 '''Arquivo para processar e analisar a perda dos pacotes do Dataset'''
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'static'
+cenario = 'static'  # Cenário a ser analisado
 
 # Total esperado de pacotes
 total_esperado = 181
@@ -17,10 +17,10 @@ por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela
 
 # Variável para escolher se arquivos específicos serão considerados
 considerar_arquivos = {
-    "ORT": False,
+    "ORT": True,
     "SYLABS": False,
     "UBLOX": False,
-    "4T": True,
+    "4T": False,
     "3T": False,
     "OUTROS": False
 }
@@ -33,8 +33,8 @@ plotar_graficos = {
     "nao_recebidos_por_arquivo": True,
     "heatmap_nao_processados": True,
     "heatmap_nao_recebidos": True,
-    "grafico_espacial_nao_processados": True,
-    "grafico_espacial_nao_recebidos": True
+    "grafico_espacial_nao_processados": False,
+    "grafico_espacial_nao_recebidos": False
 }
 
 
@@ -120,14 +120,15 @@ def normalizar_ppe_ids(data_df):
         'ble-pd-B43A31EF7B26': 'Capacete',
         'ble-pd-588E816309D5': 'Camisa',
         'ble-pd-B43A31EF7B34': 'Camisa',
-        'ble-pd-B34A31EF7527': 'Camisa',
+        'ble-pd-B43A31EF7527': 'Camisa',
         'ble-pd-B43A31EB228D': 'Bota',
         'ble-pd-B43A31EB2289': 'Calça',
     }
-    if 'ppeID' in data_df.columns:
-        data_df['ppeID'] = data_df['ppeID'].replace(ppe_id_map)
-    elif 'ppe_id' in data_df.columns:
-        data_df['ppe_id'] = data_df['ppe_id'].replace(ppe_id_map)
+    if cenario == 'static' or cenario == 'mobility':
+        if 'ppeID' in data_df.columns:
+            data_df['ppeID'] = data_df['ppeID'].replace(ppe_id_map)
+        elif 'ppe_id' in data_df.columns:
+            data_df['ppe_id'] = data_df['ppe_id'].replace(ppe_id_map)
     return data_df
 
 # Função para calcular a perda de pacotes "Não Processados"
