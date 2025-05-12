@@ -9,7 +9,7 @@ import matplotlib.image as mpimg
 '''Arquivo para processar e analisar o erro do ângulo azimute'''
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'static'  # Cenário a ser analisado
+cenario = 'calibration'  # Cenário a ser analisado
 
 # Variável para definir se os gráficos e resultados serão feitos por cada tipo de ppe_id ou pela média
 por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela média
@@ -332,5 +332,5 @@ if plotar_graficos["heatmap_erro_azimute"]:
     gerar_heatmap(results_erro_azimute_df)
 
 # Gerar gráfico espacial do erro médio do ângulo azimute
-if plotar_graficos["grafico_espacial_erro_azimute"]:
+if plotar_graficos["grafico_espacial_erro_azimute"] and cenario in ['calibration', 'static']:
     gerar_grafico_espacial_erro_azimute(results_erro_azimute_df, os.path.join(base_path, cenario_to_folder[cenario], 'Data IQ'))

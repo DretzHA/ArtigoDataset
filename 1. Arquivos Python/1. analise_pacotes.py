@@ -7,7 +7,7 @@ import seaborn as sns
 '''Arquivo para processar e analisar a perda dos pacotes do Dataset'''
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'static'  # Cenário a ser analisado
+cenario = 'mobility'  # Cenário a ser analisado
 
 # Total esperado de pacotes
 total_esperado = 181
@@ -33,8 +33,8 @@ plotar_graficos = {
     "nao_recebidos_por_arquivo": False,
     "heatmap_nao_processados": False,
     "heatmap_nao_recebidos": False,
-    "grafico_espacial_nao_processados": False,
-    "grafico_espacial_nao_recebidos": True
+    "grafico_espacial_nao_processados": True,
+    "grafico_espacial_nao_recebidos": False
 }
 
 
@@ -312,6 +312,7 @@ def gerar_grafico_espacial_por_ppe(results_df, data_path, tipo, ppe_id=None):
                 file_name = row['file_name']
                 data_file_path = os.path.join(data_path, file_name)
                 data_df = pd.read_csv(data_file_path)
+                data_df = normalizar_ppe_ids(data_df)
                 test_position = data_df[data_df['ppeID'] == row['ppe_id']][['X_real', 'Y_real']].iloc[0]
                 x_real, y_real = test_position['X_real'], test_position['Y_real']
 
@@ -345,6 +346,54 @@ def gerar_grafico_espacial_por_ppe(results_df, data_path, tipo, ppe_id=None):
         if ppe_id:
             plt.suptitle(f'Gráfico Espacial - PPE_ID: {ppe_id}', fontsize=16)
         plt.show()
+
+# Função para gerar gráficos espaciais para o cenário de mobilidade
+def gerar_grafico_espacial_mobility(data_path, results_df, tipo='nao_processados'):
+    data_files = sorted([f for f in os.listdir(data_path) if f.endswith('.csv')])
+    data_files = filtrar_arquivos(data_files)
+
+    # Ignorar arquivos com "MIP" no nome por enquanto
+    data_files = [f for f in data_files if 'MIP' not in f]
+
+    for ppe_id in results_df['ppe_id'].unique():
+        for file_name in data_files:
+            file_path = os.path.join(data_path, file_name)
+            data_df = pd.read_csv(file_path)
+
+            # Normalizar os ppeIDs
+            data_df = normalizar_ppe_ids(data_df)
+
+            # Filtrar os dados para o ppe_id atual
+            data_df = data_df[data_df['ppeID'] == ppe_id]
+
+            fig, ax = plt.subplots(figsize=(12, 10))
+            ax.imshow(img, extent=[0, -10.70, 8.8, 0])  # Ajustar os limites do eixo com base no sistema fornecido
+
+            # Iterar sobre cada linha do arquivo, plotando a cada 3 linhas
+            for idx, row in data_df.iterrows():
+                if idx % 1 == 0:  # Plotar apenas a cada 3 linhas
+                    x_real, y_real = row['X_real'], row['Y_real']
+                    # if x_real==-100 or x_real == 'nan':
+                    #     print()
+                    ax.scatter(x_real, y_real, color='green', marker='o', s=50, alpha=0.6)
+
+                    # Contar âncoras com dados recebidos ou processados
+                    if tipo == 'nao_processados':
+                        count = sum(pd.notnull(row[f'Azim_{anchor_mapping[anchor]}']) for anchor in anchor_mapping)
+                        color = 'blue'
+                    elif tipo == 'nao_recebidos':
+                        count = sum(row['anchor_id'] == anchor for anchor in anchor_mapping)
+                        color = 'orange'
+
+                    # Adicionar texto com a contagem de âncoras
+                    ax.text(x_real, y_real - 0.2, f'{count}', fontsize=8, color=color, ha='center')
+
+            # Configurações do gráfico
+            ax.set_title(f'Gráfico Espacial - {tipo.capitalize()} - PPE_ID: {ppe_id} - Arquivo: {file_name}')
+            ax.set_xlabel('X-axis (meters)')
+            ax.set_ylabel('Y-axis (meters)')
+            plt.tight_layout()
+            plt.show()
 
 # Verificar se o cenário é válido
 if cenario not in cenario_to_folder:
@@ -493,10 +542,14 @@ if plotar_graficos["heatmap_nao_recebidos"]:
 
 '''Gráfico espacial'''
 # Gráfico espacial para Não Processados
-if plotar_graficos["grafico_espacial_nao_processados"]:
+if plotar_graficos["grafico_espacial_nao_processados"] and cenario in ['calibration', 'static']:
     gerar_grafico_espacial(results_nao_processados_df, data_path, tipo='nao_processados')
 
 # Gráfico espacial para Não Recebidos
-if plotar_graficos["grafico_espacial_nao_recebidos"]:
+if plotar_graficos["grafico_espacial_nao_recebidos"] and cenario in ['calibration', 'static']:
     gerar_grafico_espacial(results_nao_recebidos_df, data_path, tipo='nao_recebidos')
+
+# Gráfico espacial para Não Processados no cenário de mobilidade
+if plotar_graficos["grafico_espacial_nao_processados"] and cenario == 'mobility':
+    gerar_grafico_espacial_mobility(data_path, results_nao_processados_df, tipo='nao_processados')
 
