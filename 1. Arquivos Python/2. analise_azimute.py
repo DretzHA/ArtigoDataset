@@ -46,6 +46,26 @@ anchor_mapping = {
     'ble-pd-D299A0EB1D6C': 7    
 }
 
+# Coordenadas das âncoras (valores padrão)
+anchor_coords = {
+    1: {'x': -1.00, 'y': 7.83},  # A01
+    2: {'x': -0.96, 'y': 1.22},  # A02
+    3: {'x': -5.81, 'y': 7.85},  # A03
+    4: {'x': -3.50, 'y': 4.60},  # A04
+    5: {'x': -5.76, 'y': 4.64},  # A05
+    6: {'x': -0.98, 'y': 4.54},  # A06
+    7: {'x': -5.85, 'y': 1.21},  # A07
+}
+
+# Atualizar coordenadas das âncoras se ORT estiver habilitado
+if considerar_arquivos["ORT"]:
+    anchor_coords.update({
+        1: {'x': -0.84, 'y': 0.54},  # A01
+        2: {'x': -7.14, 'y': 7.74},  # A02
+        3: {'x': -1.14, 'y': 7.74},  # A03
+        4: {'x': -7.74, 'y': 0.84},  # A04
+    })
+
 # Caminho base para os datasets
 base_path = '0. Dataset'
 
