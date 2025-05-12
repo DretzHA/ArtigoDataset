@@ -17,24 +17,24 @@ por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela
 
 # Variável para escolher se arquivos específicos serão considerados
 considerar_arquivos = {
-    "ORT": True,
+    "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
     "4T": False,
     "3T": False,
-    "OUTROS": False
+    "OUTROS": True
 }
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
-    "nao_processados_por_ancora": True,
-    "nao_recebidos_por_ancora": True,
-    "nao_processados_por_arquivo": True,
-    "nao_recebidos_por_arquivo": True,
-    "heatmap_nao_processados": True,
-    "heatmap_nao_recebidos": True,
+    "nao_processados_por_ancora": False,
+    "nao_recebidos_por_ancora": False,
+    "nao_processados_por_arquivo": False,
+    "nao_recebidos_por_arquivo": False,
+    "heatmap_nao_processados": False,
+    "heatmap_nao_recebidos": False,
     "grafico_espacial_nao_processados": False,
-    "grafico_espacial_nao_recebidos": False
+    "grafico_espacial_nao_recebidos": True
 }
 
 
