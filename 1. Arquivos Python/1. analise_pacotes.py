@@ -27,14 +27,14 @@ considerar_arquivos = {
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
-    "nao_processados_por_ancora": False,
-    "nao_recebidos_por_ancora": False,
+    "nao_processados_por_ancora": True,
+    "nao_recebidos_por_ancora": True,
     "nao_processados_por_arquivo": False,
     "nao_recebidos_por_arquivo": False,
     "heatmap_nao_processados": False,
     "heatmap_nao_recebidos": False,
     "grafico_espacial_nao_processados": True,
-    "grafico_espacial_nao_recebidos": False
+    "grafico_espacial_nao_recebidos": True
 }
 
 
