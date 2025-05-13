@@ -19,9 +19,9 @@ considerar_arquivos = {
     "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
-    "4T": False,
+    "4T": True,
     "3T": False,
-    "OUTROS": True
+    "OUTROS": False
 }
 
 # Variáveis para definir quais gráficos serão plotados
@@ -363,41 +363,33 @@ if plotar_graficos["grafico_espacial_erro_azimute"]:
                         plt.text(coords['x'], coords['y'] + 0.3, f'A{anchor_id}', fontsize=10, color='red', ha='center')
                     
                     for anchor_id, coords in anchor_coords.items():
-                        # Linha do azimute real (comentada para usar os valores calculados anteriormente)
-                        real_azimuth_x = [x_real, coords['x']]
-                        real_azimuth_y = [y_real, coords['y']]
+                        # Verificar se o valor medido do azimute existe antes de plotar
+                        if not np.isnan(data_row.get(f'Azim_{anchor_id}', np.nan)):
+                            # Linha do azimute real
+                            real_azimuth_x = [x_real, coords['x']]
+                            real_azimuth_y = [y_real, coords['y']]
 
-                        # Usar os valores calculados anteriormente para o azimute real
-                        # azimuth_length = 8  # Comprimento arbitrário da linha do azimute
-                        # real_azimuth_x = [
-                        #     coords['x'],
-                        #     coords['x'] + azimuth_length * np.cos(data_row[f'Real_Azim_{anchor_id}'])
-                        # ]
-                        # real_azimuth_y = [
-                        #     coords['y'],
-                        #     coords['y'] - azimuth_length * np.sin(data_row[f'Real_Azim_{anchor_id}'])
-                        # ]
-                        plt.plot(
-                            real_azimuth_x, real_azimuth_y, 
-                            color='blue', linestyle='--', linewidth=2, alpha=0.8, 
-                            label='Azimute Real' if anchor_id == 1 else ""
-                        )
-                        
-                        # Linha do azimute medido saindo de cada âncora com comprimento arbitrário
-                        azimuth_length = 5  # Comprimento arbitrário da linha do azimute
-                        measured_azimuth_x = [
-                            coords['x'],
-                            coords['x'] + azimuth_length * np.cos(data_row[f'Azim_{anchor_id}'])
-                        ]
-                        measured_azimuth_y = [
-                            coords['y'],
-                            coords['y'] - azimuth_length * np.sin(data_row[f'Azim_{anchor_id}'])
-                        ]
-                        plt.plot(
-                            measured_azimuth_x, measured_azimuth_y, 
-                            color='green', linestyle='-', linewidth=2, alpha=0.8, 
-                            label='Azimute Medido' if anchor_id == 1 else ""
-                        )
+                            plt.plot(
+                                real_azimuth_x, real_azimuth_y, 
+                                color='blue', linestyle='--', linewidth=2, alpha=0.8, 
+                                label='Azimute Real' if anchor_id == 1 else ""
+                            )
+                            
+                            # Linha do azimute medido saindo de cada âncora com comprimento arbitrário
+                            azimuth_length = 10  # Comprimento arbitrário da linha do azimute
+                            measured_azimuth_x = [
+                                coords['x'],
+                                coords['x'] + azimuth_length * np.cos(data_row[f'Azim_{anchor_id}'])
+                            ]
+                            measured_azimuth_y = [
+                                coords['y'],
+                                coords['y'] - azimuth_length * np.sin(data_row[f'Azim_{anchor_id}'])
+                            ]
+                            plt.plot(
+                                measured_azimuth_x, measured_azimuth_y, 
+                                color='green', linestyle='-', linewidth=2, alpha=0.8, 
+                                label='Azimute Medido' if anchor_id == 1 else ""
+                            )
                     
                     # Configurar título e exibir o gráfico para cada posição
                     plt.title(f'Gráfico Espacial - PPE_ID: {ppe_id}, Arquivo: {file_name}, Posição: ({x_real:.2f}, {y_real:.2f})')
@@ -405,4 +397,6 @@ if plotar_graficos["grafico_espacial_erro_azimute"]:
                     plt.ylabel("Y-axis (meters)")
                     # plt.legend(loc='upper right', fontsize=8)
                     plt.tight_layout()
+                    plt.xlim((0, -10.70))   
+                    plt.ylim(8.8, 0)     
                     plt.show()
