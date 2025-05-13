@@ -19,9 +19,9 @@ considerar_arquivos = {
     "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
-    "4T": True,
+    "4T": False,
     "3T": False,
-    "OUTROS": False
+    "OUTROS": True
 }
 
 # Variáveis para definir quais gráficos serão plotados
@@ -190,7 +190,7 @@ def calcular_erro_azimute_por_cenario(cenario):
                         'file_name': file_name,
                         'ppe_id': ppe_id,
                         'anchor': anchor,
-                        'erro_azimute': row[f'Erro_Azim_{anchor_id}']
+                        'erro_azimute': row[f'Erro_Azim_{anchor_id}'],
                     })
 
     results_df = pd.DataFrame(results)
@@ -332,5 +332,53 @@ if plotar_graficos["heatmap_erro_azimute"]:
     gerar_heatmap(results_erro_azimute_df)
 
 # Gerar gráfico espacial do erro médio do ângulo azimute
-if plotar_graficos["grafico_espacial_erro_azimute"] and cenario in ['calibration', 'static']:
-    gerar_grafico_espacial_erro_azimute(results_erro_azimute_df, os.path.join(base_path, cenario_to_folder[cenario], 'Data IQ'))
+if plotar_graficos["grafico_espacial_erro_azimute"]:
+    if cenario in ['calibration', 'static']:
+        gerar_grafico_espacial_erro_azimute(results_erro_azimute_df, os.path.join(base_path, cenario_to_folder[cenario], 'Data IQ'))
+    elif cenario == 'mobility':
+        for ppe_id in results_erro_azimute_df['ppe_id'].unique():
+            ppe_results = results_erro_azimute_df[results_erro_azimute_df['ppe_id'] == ppe_id]
+            
+            for file_name in ppe_results['file_name'].unique():
+                file_results = ppe_results[ppe_results['file_name'] == file_name]
+                data_file_path = os.path.join(base_path, cenario_to_folder[cenario], 'Data IQ', file_name)
+                data_df = pd.read_csv(data_file_path)
+                data_df = normalizar_ppe_ids(data_df)
+                
+                plt.figure(figsize=(10, 8))
+                plt.imshow(img, extent=[0, -10.70, 8.8, 0])  # Ajustar os limites do eixo com base no sistema fornecido
+                
+                # Plotar âncoras
+                for anchor_id, coords in anchor_coords.items():
+                    plt.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor_id}')
+                    plt.text(coords['x'], coords['y'] + 0.3, f'A{anchor_id}', fontsize=10, color='red', ha='center')
+                
+                # Plotar linhas de azimute real e medido
+                for _, row in file_results.iterrows():
+                    x_real, y_real = data_df[data_df['ppeID'] == ppe_id][['X_real', 'Y_real']].iloc[0]
+                    anchor_id = row['anchor']
+                    anchor_coords_current = anchor_coords[anchor_id]
+                    
+                    # Linha do azimute real
+                    real_azimuth_x = [x_real, anchor_coords_current['x']]
+                    real_azimuth_y = [y_real, anchor_coords_current['y']]
+                    plt.plot(real_azimuth_x, real_azimuth_y, color='blue', linestyle='--', label='Azimute Real' if anchor_id == 1 else "")
+                    
+                    # Linha do azimute medido saindo de cada âncora com comprimento arbitrário
+                    azimuth_length = 8  # Comprimento arbitrário da linha do azimute
+                    measured_azimuth_x = [
+                        anchor_coords_current['x'],
+                        anchor_coords_current['x'] + azimuth_length * np.cos(data_df.loc[data_df['ppeID'] == ppe_id, f'Azim_{anchor_id}'].iloc[0])
+                    ]
+                    measured_azimuth_y = [
+                        anchor_coords_current['y'],
+                        anchor_coords_current['y'] + azimuth_length * np.sin(data_df.loc[data_df['ppeID'] == ppe_id, f'Azim_{anchor_id}'].iloc[0])
+                    ]
+                    plt.plot(measured_azimuth_x, measured_azimuth_y, color='green', linestyle='-', label='Azimute Medido' if anchor_id == 1 else "")
+                
+                plt.title(f'Gráfico Espacial - PPE_ID: {ppe_id}, Arquivo: {file_name}')
+                plt.xlabel("X-axis (meters)")
+                plt.ylabel("Y-axis (meters)")
+                #plt.legend(loc='upper right')
+                plt.tight_layout()
+                plt.show()
