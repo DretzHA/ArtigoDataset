@@ -26,9 +26,9 @@ considerar_arquivos = {
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
-    "erro_azimute_por_ancora": False,
-    "erro_azimute_por_arquivo": False,
-    "heatmap_erro_azimute": False,
+    "erro_azimute_por_ancora": True,
+    "erro_azimute_por_arquivo": True,
+    "heatmap_erro_azimute": True,
     "grafico_espacial_erro_azimute": True
 }
 
