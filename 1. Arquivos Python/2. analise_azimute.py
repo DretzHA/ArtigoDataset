@@ -19,9 +19,9 @@ considerar_arquivos = {
     "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
-    "4T": True,
+    "4T": False,
     "3T": False,
-    "OUTROS": False
+    "OUTROS": True
 }
 
 # Variáveis para definir quais gráficos serão plotados
@@ -321,6 +321,8 @@ def gerar_grafico_espacial_erro_azimute(results_df, data_path):
                     plt.suptitle(f'Gráfico Espacial - PPE_ID: {ppe_id}', fontsize=12)
                 plt.show()
 
+from matplotlib.animation import PillowWriter
+
 # Verificar se o cenário é válido
 if cenario not in cenario_to_folder:
     raise ValueError(f"Cenário inválido: {cenario}. Escolha entre: {', '.join(cenario_to_folder.keys())}")
@@ -344,6 +346,7 @@ if plotar_graficos["grafico_espacial_erro_azimute"]:
             ppe_results = results_erro_azimute_df[results_erro_azimute_df['ppe_id'] == ppe_id]
             
             for file_name in ppe_results['file_name'].unique():
+                gif_frames = []  # Lista para armazenar os frames do GIF para o arquivo atual
                 file_results = ppe_results[ppe_results['file_name'] == file_name]
                 data_file_path = os.path.join(base_path, cenario_to_folder[cenario], 'Data IQ', file_name)
                 data_df = pd.read_csv(data_file_path)
@@ -354,13 +357,13 @@ if plotar_graficos["grafico_espacial_erro_azimute"]:
                 for _, data_row in data_df[data_df['ppeID'] == ppe_id].iterrows():
                     x_real, y_real = data_row['X_real'], data_row['Y_real']
 
-                    plt.figure(figsize=(10, 8))
-                    plt.imshow(img, extent=[0, -10.70, 8.8, 0])  # Ajustar os limites do eixo com base no sistema fornecido
+                    fig, ax = plt.subplots(figsize=(10, 8))
+                    ax.imshow(img, extent=[0, -10.70, 8.8, 0])  # Ajustar os limites do eixo com base no sistema fornecido
                 
                     # Plotar âncoras
                     for anchor_id, coords in anchor_coords.items():
-                        plt.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor_id}')
-                        plt.text(coords['x'], coords['y'] + 0.3, f'A{anchor_id}', fontsize=10, color='red', ha='center')
+                        ax.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor_id}')
+                        ax.text(coords['x'], coords['y'] + 0.3, f'A{anchor_id}', fontsize=10, color='red', ha='center')
                     
                     for anchor_id, coords in anchor_coords.items():
                         # Verificar se o valor medido do azimute existe antes de plotar
@@ -369,7 +372,7 @@ if plotar_graficos["grafico_espacial_erro_azimute"]:
                             real_azimuth_x = [x_real, coords['x']]
                             real_azimuth_y = [y_real, coords['y']]
 
-                            plt.plot(
+                            ax.plot(
                                 real_azimuth_x, real_azimuth_y, 
                                 color='blue', linestyle='--', linewidth=2, alpha=0.8, 
                                 label='Azimute Real' if anchor_id == 1 else ""
@@ -385,18 +388,35 @@ if plotar_graficos["grafico_espacial_erro_azimute"]:
                                 coords['y'],
                                 coords['y'] - azimuth_length * np.sin(data_row[f'Azim_{anchor_id}'])
                             ]
-                            plt.plot(
+                            ax.plot(
                                 measured_azimuth_x, measured_azimuth_y, 
                                 color='green', linestyle='-', linewidth=2, alpha=0.8, 
                                 label='Azimute Medido' if anchor_id == 1 else ""
                             )
                     
-                    # Configurar título e exibir o gráfico para cada posição
-                    plt.title(f'Gráfico Espacial - PPE_ID: {ppe_id}, Arquivo: {file_name}, Posição: ({x_real:.2f}, {y_real:.2f})')
-                    plt.xlabel("X-axis (meters)")
-                    plt.ylabel("Y-axis (meters)")
-                    # plt.legend(loc='upper right', fontsize=8)
+                    # Configurar título e layout
+                    ax.set_title(f'Gráfico Espacial - PPE_ID: {ppe_id}, Arquivo: {file_name}, Posição: ({x_real:.2f}, {y_real:.2f})')
+                    ax.set_xlabel("X-axis (meters)")
+                    ax.set_ylabel("Y-axis (meters)")
+                    ax.set_xlim((0, -10.70))   
+                    ax.set_ylim(8.8, 0)     
                     plt.tight_layout()
-                    plt.xlim((0, -10.70))   
-                    plt.ylim(8.8, 0)     
-                    plt.show()
+                    # plt.show()
+
+                    # Salvar o frame na lista
+                    fig.canvas.draw()
+                    frame = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
+                    frame = frame.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+                    gif_frames.append(frame)
+                    plt.close(fig)
+
+                # Criar o GIF para o arquivo atual usando Pillow
+                from PIL import Image
+                gif_images = [Image.fromarray(frame) for frame in gif_frames]
+                gif_images[0].save(
+                    f'grafico_espacial_{file_name}.gif', 
+                    save_all=True, 
+                    append_images=gif_images[1:], 
+                    duration=500, 
+                    loop=0
+                )
