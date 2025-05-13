@@ -18,7 +18,7 @@ ppeid_mapping = {
 input_columns = [
     "CreateTime", "ppeID", "idBeacon", "Sequence_number", "Channel",
     "RSSI_1", "RSSI_2", "RSSI_3", "RSSI_4", "RSSI_5", "RSSI_6", "RSSI_7",
-    "Azim_1", "Azim_2", "Azim_3", "Azim_4", "Azim_5",
+    "Azim_1", "Azim_2", "Azim_3", "Azim_4", "Azim_5", "Azim_6", "Azim_7",
     "Elev_1", "Elev_2", "Elev_3", "Elev_4", "Elev_5", "Elev_6", "Elev_7",
     "X_sylabs", "Y_sylabs", "Z_sylabs", "X_real", "Y_real", "Z_real"
 ]
@@ -47,7 +47,7 @@ def find_reference_file(input_file_name, reference_folder):
 
 def process_file(input_file_path, reference_file_path):
     # Definir o número máximo de colunas esperadas no arquivo de entrada
-    max_columns = 692  # Ajuste este valor conforme necessário
+    max_columns = 694  # Ajuste este valor conforme necessário
 
     # Ler o arquivo de entrada (TXT) com o número máximo de colunas esperado
     input_df = pd.read_csv(input_file_path, header=None, names=range(max_columns))
@@ -58,7 +58,7 @@ def process_file(input_file_path, reference_file_path):
     input_df.fillna(float('nan'), inplace=True)
 
     # Índice inicial das colunas de IQ
-    iq_start_index = 24  # Começa na coluna 24
+    iq_start_index = 26  # Começa na coluna 24
     iq_block_size = 82   # Tamanho de cada bloco de IQ (82 elementos)
 
     # Criar listas para armazenar os valores processados de IQ
@@ -101,7 +101,7 @@ def process_file(input_file_path, reference_file_path):
         input_df[f"iq_q_{i}"] = [float('nan')] * len(input_df)
 
     # Remover as colunas com os títulos 680, 681, 682, 683, 684, 685
-    colunas_para_remover = [680, 681, 682, 683, 684, 685]
+    colunas_para_remover = [682, 683, 684, 685, 686, 687]
     input_df = input_df.drop(columns=colunas_para_remover, errors='ignore')
 
     # Atribuir os nomes das colunas após o tratamento
@@ -117,46 +117,46 @@ def process_file(input_file_path, reference_file_path):
     valid_ppeIDs = reference_df['ppeID'].unique()
     input_df = input_df[input_df['ppeID'].isin(valid_ppeIDs)]
 
-    # Adicionar ou substituir as colunas no arquivo de entrada
-    for index, row in input_df.iterrows():
-        ppe_id = row['ppeID']
-        sequence_number = row['Sequence_number']
+    # # Adicionar ou substituir as colunas no arquivo de entrada
+    # for index, row in input_df.iterrows():
+    #     ppe_id = row['ppeID']
+    #     sequence_number = row['Sequence_number']
 
-        # Filtrar o DataFrame de referência para encontrar os valores correspondentes
-        match = reference_df[
-            (reference_df['ppeID'] == ppe_id) &
-            (reference_df['BeaconID'] == sequence_number)
-        ]
+    #     # Filtrar o DataFrame de referência para encontrar os valores correspondentes
+    #     match = reference_df[
+    #         (reference_df['ppeID'] == ppe_id) &
+    #         (reference_df['BeaconID'] == sequence_number)
+    #     ]
 
-        if not match.empty:
-            # Adicionar os valores de Azim_5 e Azim_6
-            input_df.at[index, 'Azim_7'] = match['Azim_7'].values[0]
-            input_df.at[index, 'Azim_6'] = match['Azim_6'].values[0]
+    #     if not match.empty:
+    #         # Adicionar os valores de Azim_5 e Azim_6
+    #         input_df.at[index, 'Azim_7'] = match['Azim_7'].values[0]
+    #         input_df.at[index, 'Azim_6'] = match['Azim_6'].values[0]
 
-            # Substituir as colunas de coordenadas
-            input_df.at[index, 'X_sylabs'] = match['X_sylabs'].values[0]
-            input_df.at[index, 'Y_sylabs'] = match['Y_sylabs'].values[0]
-            input_df.at[index, 'Z_sylabs'] = match['Z_sylabs'].values[0]
-            input_df.at[index, 'X_real'] = match['X_real'].values[0]
-            input_df.at[index, 'Y_real'] = match['Y_real'].values[0]
-            input_df.at[index, 'Z_real'] = match['Z_real'].values[0]
+    #         # Substituir as colunas de coordenadas
+    #         input_df.at[index, 'X_sylabs'] = match['X_sylabs'].values[0]
+    #         input_df.at[index, 'Y_sylabs'] = match['Y_sylabs'].values[0]
+    #         input_df.at[index, 'Z_sylabs'] = match['Z_sylabs'].values[0]
+    #         input_df.at[index, 'X_real'] = match['X_real'].values[0]
+    #         input_df.at[index, 'Y_real'] = match['Y_real'].values[0]
+    #         input_df.at[index, 'Z_real'] = match['Z_real'].values[0]
         
-    # Supondo que Azim_5 já exista no input_df
-    colunas = list(input_df.columns)
+    # # Supondo que Azim_5 já exista no input_df
+    # colunas = list(input_df.columns)
 
-    # Garante que Azim_6 e Azim_7 estão na lista apenas uma vez
-    for col in ['Azim_6', 'Azim_7']:
-        if col in colunas:
-            colunas.remove(col)
+    # # Garante que Azim_6 e Azim_7 estão na lista apenas uma vez
+    # for col in ['Azim_6', 'Azim_7']:
+    #     if col in colunas:
+    #         colunas.remove(col)
 
-    # Posição onde Azim_6 e Azim_7 devem ser inseridas (logo após Azim_5)
-    pos = colunas.index('Azim_5') + 1
+    # # Posição onde Azim_6 e Azim_7 devem ser inseridas (logo após Azim_5)
+    # pos = colunas.index('Azim_5') + 1
 
-    # Insere Azim_6 e Azim_7 na posição correta
-    colunas[pos:pos] = ['Azim_6', 'Azim_7']
+    # # Insere Azim_6 e Azim_7 na posição correta
+    # colunas[pos:pos] = ['Azim_6', 'Azim_7']
 
-    # Reordena o DataFrame
-    input_df = input_df[colunas]
+    # # Reordena o DataFrame
+    # input_df = input_df[colunas]
 
         
     return input_df
@@ -200,10 +200,42 @@ reference_folder = "0. Dataset/1. Static/Data"  # Substitua pelo caminho da past
 output_folder = "0. Dataset/1. Static/Data IQ"  # Substitua pelo caminho da pasta de saída
 input_folder = "0. Dataset/99. Dados DB/Com Amostras IQ/1. Static"  # Substitua pelo caminho da pasta de referência
 
-process_multiple_files(input_folder, output_folder, reference_folder)
+def process_single_file(input_file_path, output_file_path, reference_folder, x_real, y_real, z_real):
+    # Encontrar o arquivo de referência correspondente
+    input_file_name = os.path.basename(input_file_path)
+    reference_file_path = find_reference_file(input_file_name, reference_folder)
+    if reference_file_path is None:
+        print(f"Arquivo de referência não encontrado para: {input_file_name}")
+        return
 
-# # Adicionar Azim_6 e Azim_7 ao arquivo STC_C1P1_4T_data.csv na pasta Data IQ
-# specific_file_name = "STC_C1P1_4T_data.csv"
+    try:
+        # Processar o arquivo
+        processed_df = process_file(input_file_path, reference_file_path)
+
+        # Inserir os valores de X_real, Y_real e Z_real manualmente
+        processed_df['X_real'] = x_real
+        processed_df['Y_real'] = y_real
+        processed_df['Z_real'] = z_real
+
+        # Salvar o arquivo processado no caminho de saída
+        processed_df.to_csv(output_file_path, index=False)
+        print(f"Arquivo processado e salvo: {output_file_path}")
+
+    except pd.errors.ParserError as e:
+        # Capturar erros de parsing
+        print(f"Erro ao processar o arquivo {input_file_name}: {e}")
+
+    except Exception as e:
+        # Capturar outros erros
+        print(f"Erro inesperado ao processar o arquivo {input_file_name}: {e}")
+
+# Exemplo de uso para processar um único arquivo
+input_file_path = "0. Dataset/99. Dados DB/Com Amostras IQ/1. Static/exported_STC_C1P1_4T.txt"  # Substitua pelo caminho do arquivo de entrada
+output_file_path = "0. Dataset/1. Static/Data IQ/STC_C1P1_4T_data.csv"  # Substitua pelo caminho do arquivo de saída
+process_single_file(input_file_path, output_file_path, reference_folder, x_real=-1.14, y_real=0.39, z_real=1.96)
+
+# Adicionar Azim_6 e Azim_7 ao arquivo STC_C1P1_4T_data.csv na pasta Data IQ
+specific_file_name = "STC_C1P1_4T_data.csv"
 
 # # Caminhos para o arquivo de referência e o arquivo processado
 # reference_file_path = os.path.join(reference_folder, specific_file_name)
