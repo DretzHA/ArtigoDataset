@@ -6,8 +6,12 @@ import seaborn as sns
 
 '''Arquivo para processar e analisar a perda dos pacotes do Dataset'''
 
+# Caminho base para os datasets
+# base_path = '0. Dataset Original'
+base_path = '0. Dataset com Mascara Virtual'
+
 # Escolher Cenário - calibration | static | mobility
-cenario = 'mobility'  # Cenário a ser analisado
+cenario = 'calibration'  # Cenário a ser analisado
 
 # Total esperado de pacotes
 total_esperado = 181
@@ -79,9 +83,6 @@ if considerar_arquivos["ORT"]:
 # Caminho para a imagem de fundo
 img_path = '1. Arquivos Python/99. Imagens/background_v2.png'
 img = mpimg.imread(img_path)
-
-# Caminho base para os datasets
-base_path = '0. Dataset'
 
 # Função para filtrar arquivos com base na variável considerar_arquivos
 def filtrar_arquivos(data_files):

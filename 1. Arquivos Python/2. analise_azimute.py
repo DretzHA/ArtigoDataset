@@ -7,6 +7,9 @@ import matplotlib.image as mpimg
 
 
 '''Arquivo para processar e analisar o erro do ângulo azimute'''
+# Caminho base para os datasets
+# base_path = '0. Dataset Original'
+base_path = '0. Dataset com Mascara Virtual'
 
 # Escolher Cenário - calibration | static | mobility
 cenario = 'mobility'  # Cenário a ser analisado
@@ -73,9 +76,6 @@ if considerar_arquivos["ORT"]:
         3: {'x': -1.14, 'y': 7.74},  # A03
         4: {'x': -7.74, 'y': 0.84},  # A04
     })
-
-# Caminho base para os datasets
-base_path = '0. Dataset'
 
 # Função para filtrar arquivos com base na variável considerar_arquivos
 def filtrar_arquivos(data_files):
