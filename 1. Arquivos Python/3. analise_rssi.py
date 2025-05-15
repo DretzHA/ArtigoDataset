@@ -12,7 +12,7 @@ import matplotlib.image as mpimg
 base_path = '0. Dataset com Mascara Virtual'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'calibration'  # Cenário a ser analisado
+cenario = 'static'  # Cenário a ser analisado
 
 # Variável para definir se os gráficos e resultados serão feitos por cada tipo de ppe_id ou pela média
 por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela média
@@ -165,7 +165,14 @@ def processar_rssi_por_arquivo(cenario):
         # Calculate mean RSSI and distances for each anchor
         for anchor_id in range(1, 8):  # Anchors 1 to 7
             if f'RSSI_{anchor_id}' in data_df.columns:
-                mean_rssi = data_df[f'RSSI_{anchor_id}'].mean()
+                # Linearize the RSSI power
+                data_df[f'RSSILin_{anchor_id}'] = np.power(10, ((data_df[f'RSSI_{anchor_id}'] - 30) / 10))
+                
+                # Calculate the mean of the linearized RSSI
+                mean_rssi_lin = data_df[f'RSSILin_{anchor_id}'].mean()
+                
+                # Convert the mean back to dBm
+                mean_rssi = 10 * np.log10(mean_rssi_lin) + 30
                 mean_distance = data_df[f'Dist_Anchor_{anchor_id}'].mean()
                 results.append({
                     'file_name': file_name,
@@ -212,6 +219,44 @@ def gerar_graficos_rssi_todos_arquivos(results_df, combined_data_df):
         plt.tight_layout()
         plt.show()
 
+# Function to generate combined plots for all RSSI points and means for each anchor, divided by PPE
+def gerar_graficos_rssi_por_ppe(results_df, combined_data_df):
+    for ppe_id in combined_data_df['ppeID'].unique():
+        ppe_data = combined_data_df[combined_data_df['ppeID'] == ppe_id]
+        ppe_results = results_df[results_df['ppe_ids'].apply(lambda x: ppe_id in x)]
+
+        print(f"Generating plots for PPE: {ppe_id}")
+        for anchor_id in ppe_results['anchor_id'].unique():
+            anchor_data = ppe_results[ppe_results['anchor_id'] == anchor_id]
+
+            plt.figure(figsize=(12, 8))
+
+            # Plot all RSSI points from all files for the current PPE
+            for i, row in ppe_data.iterrows():
+                if i % 5 == 0:  # Plot every 5th point
+                    if not pd.isna(row[f'Dist_Anchor_{anchor_id}']) and not pd.isna(row[f'RSSI_{anchor_id}']):
+                        plt.scatter(
+                            row[f'Dist_Anchor_{anchor_id}'], 
+                            row[f'RSSI_{anchor_id}'], 
+                            alpha=0.3, color='blue', label='All Points' if 'All Points' not in plt.gca().get_legend_handles_labels()[1] else ""
+                        )
+
+            # Plot mean RSSI values from results_df for the current PPE
+            for _, row in anchor_data.iterrows():
+                plt.scatter(
+                    row['mean_distance'], 
+                    row['mean_rssi'], 
+                    alpha=1.0, color='red', edgecolor='black', s=100, label='Mean' if 'Mean' not in plt.gca().get_legend_handles_labels()[1] else ""
+                )
+
+            plt.title(f'RSSI vs Distance - Anchor {anchor_id} - PPE: {ppe_id}')
+            plt.xlabel('Distance to Anchor (meters)')
+            plt.ylabel('RSSI (dBm)')
+            plt.legend(title='Legend')
+            plt.grid(True)
+            plt.tight_layout()
+            plt.show()
+
 # Check if the scenario is valid
 if cenario not in cenario_to_folder:
     raise ValueError(f"Cenário inválido: {cenario}. Escolha entre: {', '.join(cenario_to_folder.keys())}")
@@ -219,6 +264,6 @@ if cenario not in cenario_to_folder:
 # Process RSSI data and generate plots for calibration or static scenarios
 if cenario in ['calibration', 'static']:
     results_rssi_df, combined_data_df = processar_rssi_por_arquivo(cenario)
-    gerar_graficos_rssi_todos_arquivos(results_rssi_df, combined_data_df)
+    gerar_graficos_rssi_por_ppe(results_rssi_df, combined_data_df)
 
 
