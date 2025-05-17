@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import seaborn as sns
+import numpy as np
 
 '''Arquivo para processar e analisar a perda dos pacotes do Dataset'''
 
@@ -11,32 +12,26 @@ import seaborn as sns
 base_path = '0. Dataset com Mascara Virtual'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'calibration'  # Cenário a ser analisado
+cenario = 'static'  # Cenário a ser analisado
 
 # Total esperado de pacotes
 total_esperado = 181
 
-# Variável para definir se os gráficos e resultados serão feitos por cada tipo de ppe_id ou pela média
-por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela média
-
 # Variável para escolher se arquivos específicos serão considerados
 considerar_arquivos = {
-    "ORT": False,
+    "ORT": True,
     "SYLABS": False,
     "UBLOX": False,
     "4T": False,
     "3T": False,
-    "OUTROS": True
+    "OUTROS": False
 }
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
-    "nao_processados_por_ancora": True,
-    "nao_recebidos_por_ancora": True,
-    "nao_processados_por_arquivo": False,
-    "nao_recebidos_por_arquivo": False,
-    "heatmap_nao_processados": False,
-    "heatmap_nao_recebidos": False,
+    "nao_processados_e_recebidos": True,
+    "heatmap_nao_processados": True,
+    "heatmap_nao_recebidos": True,
     "grafico_espacial_nao_processados": True,
     "grafico_espacial_nao_recebidos": True
 }
@@ -163,16 +158,38 @@ def calcular_perda_nao_processados(cenario):
 
         for ppe_id in ppe_ids:
             data_filtered = data_df[data_df['ppeID'] == ppe_id]
-            for anchor, rssi_index in anchor_mapping.items():
-                azim_column = f'Azim_{rssi_index}'
-                azim_count = data_filtered[azim_column].notnull().sum()
-                results.append({
-                    'file_name': file_name,
-                    'ppe_id': ppe_id,
-                    'anchor': anchor,
-                    'nao_processados_count': azim_count,
-                    'total_esperado': total_esperado
-                })
+            for anchor, index in anchor_mapping.items():
+                # Obter a posição do teste (assumindo que todos os registros do mesmo arquivo/ppe_id têm a mesma posição)
+                if cenario in ['static', 'calibration']:
+                    if 'X_real' in data_filtered.columns and 'Y_real' in data_filtered.columns:
+                        x_real = data_filtered['X_real'].iloc[0]
+                        y_real = data_filtered['Y_real'].iloc[0]
+                        anchor_x = anchor_coords[index]['x']
+                        anchor_y = anchor_coords[index]['y']
+                        distancia = ((x_real - anchor_x) ** 2 + (y_real - anchor_y) ** 2) ** 0.5
+                    else:
+                        distancia = None
+
+                    if distancia is not None and distancia > 0.5:
+                        azim_column = f'Azim_{index}'
+                        azim_count = data_filtered[azim_column].notnull().sum()
+                        results.append({
+                            'file_name': file_name,
+                            'ppe_id': ppe_id,
+                            'anchor': anchor,
+                            'nao_processados_count': azim_count,
+                            'total_esperado': total_esperado
+                        })
+                else:  # mobility
+                    azim_column = f'Azim_{index}'
+                    azim_count = data_filtered[azim_column].notnull().sum()
+                    results.append({
+                        'file_name': file_name,
+                        'ppe_id': ppe_id,
+                        'anchor': anchor,
+                        'nao_processados_count': azim_count,
+                        'total_esperado': total_esperado
+                    })
 
     for result in results:
         result['nao_processados_loss_percentage'] = max(0, ((result['total_esperado'] - result['nao_processados_count']) / result['total_esperado']) * 100)
@@ -218,7 +235,7 @@ def calcular_perda_nao_recebidos(cenario):
                     total_esperado = filtered_result['total_esperado'].iloc[0]
                 else:
                     # Definir um valor padrão ou lidar com o caso de ausência de dados
-                    total_esperado = 0  # Ou outro valor apropriado
+                    total_esperado = 181  # Ou outro valor apropriado
 
                 results.append({
                     'file_name': file_name,
@@ -237,28 +254,15 @@ def calcular_perda_nao_recebidos(cenario):
 
 # Função para gerar gráficos com base no controle por_ppe_id
 def gerar_graficos(results_df, tipo='nao_processados'):
-    if por_ppe_id:
-        # Gerar gráficos por ppe_id
-        for ppe_id in results_df['ppe_id'].unique():
-            ppe_results = results_df[results_df['ppe_id'] == ppe_id]
-            if tipo == 'nao_processados':
-                loss_data = ppe_results.groupby('anchor')['nao_processados_loss_percentage'].mean()
-                title = f'Perda de Pacotes por Âncora (Não Processados) - PPE_ID: {ppe_id}'
-            elif tipo == 'nao_recebidos':
-                loss_data = ppe_results.groupby('anchor')['nao_recebidos_loss_percentage'].mean()
-                title = f'Perda de Pacotes por Âncora (Não Recebidos) - PPE_ID: {ppe_id}'
-            loss_data.plot(kind='bar', figsize=(10, 6), title=title)
-            plt.xlabel('Âncora')
-            plt.ylabel('Porcentagem de Perda (%)')
-            plt.show()
-    else:
-        # Gerar gráficos pela média
+    # Gerar gráficos por ppe_id
+    for ppe_id in results_df['ppe_id'].unique():
+        ppe_results = results_df[results_df['ppe_id'] == ppe_id]
         if tipo == 'nao_processados':
-            loss_data = results_df.groupby('anchor')['nao_processados_loss_percentage'].mean()
-            title = 'Perda de Pacotes por Âncora (Não Processados) - Média'
+            loss_data = ppe_results.groupby('anchor')['nao_processados_loss_percentage'].mean()
+            title = f'Perda de Pacotes por Âncora (Não Processados) - PPE_ID: {ppe_id}'
         elif tipo == 'nao_recebidos':
-            loss_data = results_df.groupby('anchor')['nao_recebidos_loss_percentage'].mean()
-            title = 'Perda de Pacotes por Âncora (Não Recebidos) - Média'
+            loss_data = ppe_results.groupby('anchor')['nao_recebidos_loss_percentage'].mean()
+            title = f'Perda de Pacotes por Âncora (Não Recebidos) - PPE_ID: {ppe_id}'
         loss_data.plot(kind='bar', figsize=(10, 6), title=title)
         plt.xlabel('Âncora')
         plt.ylabel('Porcentagem de Perda (%)')
@@ -266,15 +270,12 @@ def gerar_graficos(results_df, tipo='nao_processados'):
 
 # Função para gerar gráficos espaciais com base no controle por_ppe_id
 def gerar_grafico_espacial(results_df, data_path, tipo='nao_processados'):
-    if por_ppe_id:
-        # Gerar gráficos espaciais por ppe_id
-        for ppe_id in results_df['ppe_id'].unique():
-            ppe_results = results_df[results_df['ppe_id'] == ppe_id]
-            print(f'Gerando gráfico espacial para PPE_ID: {ppe_id}')
-            gerar_grafico_espacial_por_ppe(ppe_results, data_path, tipo, ppe_id)
-    else:
-        # Gerar gráficos espaciais pela média
-        gerar_grafico_espacial_por_ppe(results_df, data_path, tipo)
+    # Gerar gráficos espaciais por ppe_id
+    for ppe_id in results_df['ppe_id'].unique():
+        ppe_results = results_df[results_df['ppe_id'] == ppe_id]
+        print(f'Gerando gráfico espacial para PPE_ID: {ppe_id}')
+        gerar_grafico_espacial_por_ppe(ppe_results, data_path, tipo, ppe_id)
+
 
 # Função auxiliar para gerar gráficos espaciais
 def gerar_grafico_espacial_por_ppe(results_df, data_path, tipo, ppe_id=None):
@@ -412,93 +413,30 @@ results_nao_processados_df = calcular_perda_nao_processados(cenario)
 results_nao_recebidos_df = calcular_perda_nao_recebidos(cenario)
 
 # Gerar gráficos para perda de pacotes por âncora (Não Processados e Não Recebidos) no mesmo gráfico
-if plotar_graficos["nao_processados_por_ancora"] and plotar_graficos["nao_recebidos_por_ancora"]:
-    if por_ppe_id:
-        for ppe_id in results_nao_processados_df['ppe_id'].unique():
-            fig, ax = plt.subplots(figsize=(12, 6))
-            ppe_results_nao_processados = results_nao_processados_df[results_nao_processados_df['ppe_id'] == ppe_id]
-            ppe_results_nao_recebidos = results_nao_recebidos_df[results_nao_recebidos_df['ppe_id'] == ppe_id]
-
-            # Gráfico de Não Processados
-            loss_data_nao_processados = ppe_results_nao_processados.groupby('anchor')['nao_processados_loss_percentage'].mean()
-            ax.bar(loss_data_nao_processados.index - 0.2, loss_data_nao_processados, width=0.4, label='Não Processados', color='blue')
-
-            # Gráfico de Não Recebidos
-            loss_data_nao_recebidos = ppe_results_nao_recebidos.groupby('anchor')['nao_recebidos_loss_percentage'].mean()
-            ax.bar(loss_data_nao_recebidos.index + 0.2, loss_data_nao_recebidos, width=0.4, label='Não Recebidos', color='orange')
-
-            # Configurações do gráfico
-            ax.set_xlabel('Âncora')
-            ax.set_ylabel('Porcentagem de Perda (%)')
-            ax.set_title(f'Perda de Pacotes por Âncora (Não Processados e Não Recebidos) - PPE_ID: {ppe_id}')
-            ax.set_xticks(loss_data_nao_processados.index)
-            ax.legend()
-
-            # Ajustar layout
-            plt.tight_layout()
-            plt.show()
-    else:
+if plotar_graficos["nao_processados_e_recebidos"]:
+    for ppe_id in results_nao_processados_df['ppe_id'].unique():
         fig, ax = plt.subplots(figsize=(12, 6))
+        ppe_results_nao_processados = results_nao_processados_df[results_nao_processados_df['ppe_id'] == ppe_id]
+        ppe_results_nao_recebidos = results_nao_recebidos_df[results_nao_recebidos_df['ppe_id'] == ppe_id]
 
         # Gráfico de Não Processados
-        loss_data_nao_processados = results_nao_processados_df.groupby('anchor')['nao_processados_loss_percentage'].mean()
+        loss_data_nao_processados = ppe_results_nao_processados.groupby('anchor')['nao_processados_loss_percentage'].mean()
         ax.bar(loss_data_nao_processados.index - 0.2, loss_data_nao_processados, width=0.4, label='Não Processados', color='blue')
 
         # Gráfico de Não Recebidos
-        loss_data_nao_recebidos = results_nao_recebidos_df.groupby('anchor')['nao_recebidos_loss_percentage'].mean()
+        loss_data_nao_recebidos = ppe_results_nao_recebidos.groupby('anchor')['nao_recebidos_loss_percentage'].mean()
         ax.bar(loss_data_nao_recebidos.index + 0.2, loss_data_nao_recebidos, width=0.4, label='Não Recebidos', color='orange')
 
         # Configurações do gráfico
         ax.set_xlabel('Âncora')
         ax.set_ylabel('Porcentagem de Perda (%)')
-        ax.set_title('Perda de Pacotes por Âncora (Não Processados e Não Recebidos) - Média')
+        ax.set_title(f'Perda de Pacotes por Âncora (Não Processados e Não Recebidos) - PPE_ID: {ppe_id}')
         ax.set_xticks(loss_data_nao_processados.index)
         ax.legend()
 
         # Ajustar layout
         plt.tight_layout()
         plt.show()
-
-# Gerar gráficos separadamente, caso apenas um deles esteja ativado
-elif plotar_graficos["nao_processados_por_ancora"]:
-    gerar_graficos(results_nao_processados_df, tipo='nao_processados')
-
-elif plotar_graficos["nao_recebidos_por_ancora"]:
-    gerar_graficos(results_nao_recebidos_df, tipo='nao_recebidos')
-
-# Gráfico de barras para perda de pacotes por arquivo e âncora (Não Processados)
-if plotar_graficos["nao_processados_por_arquivo"]:
-    nao_processados_loss_data = results_nao_processados_df.pivot_table(
-        values='nao_processados_loss_percentage',
-        index='file_name',
-        columns='anchor',
-        aggfunc='mean'
-    )
-    nao_processados_loss_data.plot(
-        kind='bar', figsize=(12, 8), title='Perda de Pacotes (Não Processados) por Arquivo e Âncora'
-    )
-    plt.xlabel('Arquivo')
-    plt.ylabel('Porcentagem de Perda (%)')
-    plt.xticks(rotation=90)
-    plt.tight_layout()
-    plt.show()
-
-# Gráfico de barras para perda de pacotes por arquivo e âncora (Não Recebidos)
-if plotar_graficos["nao_recebidos_por_arquivo"]:
-    nao_recebidos_loss_data = results_nao_recebidos_df.pivot_table(
-        values='nao_recebidos_loss_percentage',
-        index='file_name',
-        columns='anchor',
-        aggfunc='mean'
-    )
-    nao_recebidos_loss_data.plot(
-        kind='bar', figsize=(12, 8), title='Perda de Pacotes (Não Recebidos) por Arquivo e Âncora'
-    )
-    plt.xlabel('Arquivo')
-    plt.ylabel('Porcentagem de Perda (%)')
-    plt.xticks(rotation=90)
-    plt.tight_layout()
-    plt.show()
 
 '''Heatmap de Perda de Pacotes'''
 # Criar uma tabela pivot para o heatmap de Não Processados (por arquivo de teste) para cada ppeID
