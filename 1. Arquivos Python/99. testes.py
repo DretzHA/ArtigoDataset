@@ -46,25 +46,25 @@ import math
 
 #         print(f'Anchor: {anchor_id}, Teste Point: {test_id}, Angulo: {angulo}')
 
-def check_csv_files(folder_path):
-    for filename in os.listdir(folder_path):
-        if filename.endswith('.csv'):
-            file_path = os.path.join(folder_path, filename)
-            try:
-                df = pd.read_csv(file_path)
-                # Substituir -100 por NaN para facilitar o uso do ffill
-                df['X_real'] = df['X_real'].replace(-100, pd.NA)
-                df['Y_real'] = df['Y_real'].replace(-100, pd.NA)
-                df['Z_real'] = df['Z_real'].replace(-100, pd.NA)
-                # Preencher NaN com o último valor conhecido
-                df['X_real'] = df['X_real'].fillna(method='ffill')
-                df['Y_real'] = df['Y_real'].fillna(method='ffill')
-                df['Z_real'] = df['Z_real'].fillna(method='ffill')
-                # Salvar de volta se desejar:
-                df.to_csv(file_path, index=False)
-            except Exception as e:
-                print(f"Error reading {filename}: {e}")
+# def check_csv_files(folder_path):
+#     for filename in os.listdir(folder_path):
+#         if filename.endswith('.csv'):
+#             file_path = os.path.join(folder_path, filename)
+#             try:
+#                 df = pd.read_csv(file_path)
+#                 # Substituir -100 por NaN para facilitar o uso do ffill
+#                 df['X_real'] = df['X_real'].replace(-100, pd.NA)
+#                 df['Y_real'] = df['Y_real'].replace(-100, pd.NA)
+#                 df['Z_real'] = df['Z_real'].replace(-100, pd.NA)
+#                 # Preencher NaN com o último valor conhecido
+#                 df['X_real'] = df['X_real'].fillna(method='ffill')
+#                 df['Y_real'] = df['Y_real'].fillna(method='ffill')
+#                 df['Z_real'] = df['Z_real'].fillna(method='ffill')
+#                 # Salvar de volta se desejar:
+#                 df.to_csv(file_path, index=False)
+#             except Exception as e:
+#                 print(f"Error reading {filename}: {e}")
 
-# Example usage:
-check_csv_files('0. Dataset com Mascara Virtual/1. Static/Data IQ')
+# # Example usage:
+# check_csv_files('0. Dataset com Mascara Virtual/1. Static/Data IQ')
 
