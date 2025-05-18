@@ -29,7 +29,7 @@ considerar_arquivos = {
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
-    "grafico_espacial_erro_distancia": True,
+    "grafico_espacial_erro_distancia": False,
     "grafico_barras_erro_medio": True  # Nova variável de controle
 }
 
@@ -128,6 +128,11 @@ def calcular_erro_2d(df, x_est_col, y_est_col, x_real_col, y_real_col):
     df['erro_2d'] = np.sqrt((df[x_est_col] - df[x_real_col])**2 + (df[y_est_col] - df[y_real_col])**2)
     return df
 
+def calcular_erro_z(df, z_est_col, z_real_col):
+    """Adiciona coluna de erro Z ao DataFrame."""
+    df['erro_z'] = np.abs(df[z_est_col] - df[z_real_col])
+    return df
+
 def plotar_espacial(df, x_est_col, y_est_col, x_real_col, y_real_col, ppe_col, titulo, img):
     """Plota gráfico espacial das posições reais e estimadas."""
     plt.figure(figsize=(8, 8))
@@ -158,34 +163,49 @@ for file in data_files:
     # Detectar nomes das colunas
     x_est_col = 'X_sylabs'
     y_est_col = 'Y_sylabs'
+    z_est_col = 'Z_sylabs'
     x_real_col = 'X_real'
     y_real_col = 'Y_real'
+    z_real_col = 'Z_real'
     # Corrigir nomes se necessário
-    for col in [x_est_col, y_est_col, x_real_col, y_real_col]:
+    for col in [x_est_col, y_est_col, z_est_col, x_real_col, y_real_col, z_real_col]:
         if col not in df.columns:
             raise ValueError(f'Coluna {col} não encontrada em {file}')
     # Normalizar nome do ppeID
     ppe_col = 'ppeID' if 'ppeID' in df.columns else 'ppe_id'
     df = calcular_erro_2d(df, x_est_col, y_est_col, x_real_col, y_real_col)
+    df = calcular_erro_z(df, z_est_col, z_real_col)
     # Calcular erro médio por ppeID
     for ppe, subdf in df.groupby(ppe_col):
-        erro_medio = subdf['erro_2d'].mean()
-        resultados.append({'arquivo': file, 'ppeID': ppe, 'erro_medio_2d': erro_medio})
+        erro_medio_2d = subdf['erro_2d'].mean()
+        erro_medio_z = subdf['erro_z'].mean()
+        resultados.append({'arquivo': file, 'ppeID': ppe, 'erro_medio_2d': erro_medio_2d, 'erro_medio_z': erro_medio_z})
         # Plotar gráfico espacial se habilitado
         if plotar_graficos["grafico_espacial_erro_distancia"]:
             plotar_espacial(subdf, x_est_col, y_est_col, x_real_col, y_real_col, ppe_col,
                             f'{file} - {ppe}', img)
 
-# Plotar gráfico de barras do erro médio por arquivo, se habilitado
+# Plotar gráfico de barras do erro médio por arquivo e por ppeID, se habilitado
 if plotar_graficos.get("grafico_barras_erro_medio", False):
     resultados_df = pd.DataFrame(resultados)
-    # Agrupar por arquivo e calcular média dos erros (caso haja mais de um ppeID por arquivo)
-    erro_medio_por_arquivo = resultados_df.groupby('arquivo')['erro_medio_2d'].mean().reset_index()
-    plt.figure(figsize=(10, 5))
-    sns.barplot(data=erro_medio_por_arquivo, x='arquivo', y='erro_medio_2d')
+    # Agrupar por arquivo e ppeID e calcular média dos erros
+    erro_medio_por_arquivo_ppe = resultados_df.groupby(['arquivo', 'ppeID'])[['erro_medio_2d', 'erro_medio_z']].mean().reset_index()
+    plt.figure(figsize=(12, 6))
+    sns.barplot(data=erro_medio_por_arquivo_ppe, x='arquivo', y='erro_medio_2d', hue='ppeID')
     plt.ylabel('Erro Médio 2D (m)')
     plt.xlabel('Arquivo')
-    plt.title('Erro Médio 2D por Arquivo')
+    plt.title('Erro Médio 2D por Arquivo e PPEID')
+    plt.xticks(rotation=45, ha='right')
+    plt.legend(title='PPEID')
+    plt.tight_layout()
+    plt.show()
+
+    # Gráfico de barras do erro médio Z por arquivo (independente do ppeID)
+    plt.figure(figsize=(12, 6))
+    sns.barplot(data=erro_medio_por_arquivo_ppe, x='arquivo', y='erro_medio_z', hue='ppeID')
+    plt.ylabel('Erro Médio Z (m)')
+    plt.xlabel('Arquivo')
+    plt.title('Erro Médio Z por Arquivo')
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
     plt.show()
