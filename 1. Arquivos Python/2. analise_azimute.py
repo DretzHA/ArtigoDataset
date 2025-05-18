@@ -19,19 +19,19 @@ por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela
 
 # Variável para escolher se arquivos específicos serão considerados
 considerar_arquivos = {
-    "ORT": False,
+    "ORT": True,
     "SYLABS": False,
     "UBLOX": False,
     "4T": False,
     "3T": False,
-    "OUTROS": True
+    "OUTROS": False
 }
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
-    "erro_direcao_por_ancora": True,
-    "erro_direcao_por_arquivo": True,
-    "heatmap_erro_direcao": True,
+    "erro_direcao_por_ancora": False,
+    "erro_direcao_por_arquivo": False,
+    "heatmap_erro_direcao": False,
     "grafico_espacial_erro_direcao": True
 }
 
@@ -455,23 +455,61 @@ if plotar_graficos["grafico_espacial_erro_direcao"]:
                                 color='blue', linestyle='--', linewidth=2, alpha=0.8, 
                                 label='Azimute Real' if anchor_id == 1 else ""
                             )
-                            
-                            # Linha do azimute medido saindo de cada âncora com comprimento arbitrário
-                            azimuth_length = 10  # Comprimento arbitrário da linha do azimute
-                            measured_azimuth_x = [
-                                coords['x'],
-                                coords['x'] + azimuth_length * np.cos(data_row[f'Azim_{anchor_id}'])
-                            ]
-                            measured_azimuth_y = [
-                                coords['y'],
-                                coords['y'] - azimuth_length * np.sin(data_row[f'Azim_{anchor_id}'])
-                            ]
-                            ax.plot(
-                                measured_azimuth_x, measured_azimuth_y, 
-                                color='green', linestyle='-', linewidth=2, alpha=0.8, 
-                                label='Azimute Medido' if anchor_id == 1 else ""
-                            )
-                    
+
+                            # Para arquivos ORT e ancoras 1-4, usar lado e elevação
+                            if file_name.startswith('ORT') and anchor_id in [1, 2, 3, 4]:
+                                elev = data_row.get(f'Elev_{anchor_id}', np.nan)
+                                if not np.isnan(elev):
+                                    # Determinar lado (esquerda/direita) a partir do azimute medido
+                                    azim = data_row.get(f'Azim_{anchor_id}', np.nan)
+                                    azim_mod = np.abs(np.rad2deg(azim))
+                                    lado = 'esquerda' if azim_mod < 90 else 'direita'
+                                    # Definir o sentido do vetor a partir da ancora
+                                    azimuth_length = 10
+                                    # Para lado esquerda, ângulo é elev; para direita, é -elev
+                                    #angle = elev if lado == 'esquerda' else 180-elev
+                                    if lado == 'direita':
+                                        measured_azimuth_x = [
+                                            coords['x'],
+                                            coords['x'] - azimuth_length * np.cos(elev)
+                                        ]
+                                    else:
+                                        measured_azimuth_x = [
+                                            coords['x'],
+                                            coords['x'] + azimuth_length * np.cos(elev)
+                                        ]
+                                    if anchor_id in [2,3]:
+                                        measured_azimuth_y = [
+                                            coords['y'],
+                                            coords['y'] - azimuth_length * np.sin(elev)
+                                        ]
+                                    else:
+                                        measured_azimuth_y = [
+                                            coords['y'],
+                                            coords['y'] + azimuth_length * np.sin(elev)
+                                        ]
+                                    ax.plot(
+                                        measured_azimuth_x, measured_azimuth_y, 
+                                        color='green', linestyle='-', linewidth=2, alpha=0.8, 
+                                        label='Azimute Medido' if anchor_id == 1 else ""
+                                    )
+                            else:
+                                # Linha do azimute medido saindo de cada âncora com comprimento arbitrário
+                                azimuth_length = 10  # Comprimento arbitrário da linha do azimute
+                                measured_azimuth_x = [
+                                    coords['x'],
+                                    coords['x'] + azimuth_length * np.cos(data_row[f'Azim_{anchor_id}'])
+                                ]
+                                measured_azimuth_y = [
+                                    coords['y'],
+                                    coords['y'] - azimuth_length * np.sin(data_row[f'Azim_{anchor_id}'])
+                                ]
+                                ax.plot(
+                                    measured_azimuth_x, measured_azimuth_y, 
+                                    color='green', linestyle='-', linewidth=2, alpha=0.8, 
+                                    label='Azimute Medido' if anchor_id == 1 else ""
+                                )
+                
                     # Configurar título e layout
                     ax.set_title(f'Gráfico Espacial - PPE_ID: {ppe_id}, Arquivo: {file_name}, Posição: ({x_real:.2f}, {y_real:.2f})')
                     ax.set_xlabel("X-axis (meters)")
@@ -479,22 +517,22 @@ if plotar_graficos["grafico_espacial_erro_direcao"]:
                     ax.set_xlim((0, -10.70))   
                     ax.set_ylim(8.8, 0)     
                     plt.tight_layout()
-                    # plt.show()
+                    plt.show()
 
-                    # Salvar o frame na lista
-                    fig.canvas.draw()
-                    frame = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
-                    frame = frame.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-                    gif_frames.append(frame)
-                    plt.close(fig)
+                #     # Salvar o frame na lista
+                #     fig.canvas.draw()
+                #     frame = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
+                #     frame = frame.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+                #     gif_frames.append(frame)
+                #     plt.close(fig)
 
-                # Criar o GIF para o arquivo atual usando Pillow
-                from PIL import Image
-                gif_images = [Image.fromarray(frame) for frame in gif_frames]
-                gif_images[0].save(
-                    f'grafico_espacial_{file_name}.gif', 
-                    save_all=True, 
-                    append_images=gif_images[1:], 
-                    duration=500, 
-                    loop=0
-                )
+                # # Criar o GIF para o arquivo atual usando Pillow
+                # from PIL import Image
+                # gif_images = [Image.fromarray(frame) for frame in gif_frames]
+                # gif_images[0].save(
+                #     f'grafico_espacial_{file_name}.gif', 
+                #     save_all=True, 
+                #     append_images=gif_images[1:], 
+                #     duration=500, 
+                #     loop=0
+                # )

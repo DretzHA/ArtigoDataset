@@ -12,18 +12,18 @@ import numpy as np
 base_path = '0. Dataset com Mascara Virtual'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'static'  # Cenário a ser analisado
+cenario = 'calibration'  # Cenário a ser analisado
 
 # Total esperado de pacotes
 total_esperado = 181
 
 # Variável para escolher se arquivos específicos serão considerados
 considerar_arquivos = {
-    "ORT": True,
+    "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
     "4T": False,
-    "3T": False,
+    "3T": True,
     "OUTROS": False
 }
 
