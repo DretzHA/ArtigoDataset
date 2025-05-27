@@ -5,6 +5,8 @@ import seaborn as sns
 import numpy as np
 import matplotlib.image as mpimg
 import math
+from scipy.interpolate import griddata
+from scipy.spatial import cKDTree
 
 '''Arquivo para processar e analisar o erro do ângulo azimute'''
 # Caminho base para os datasets
@@ -12,17 +14,17 @@ import math
 base_path = '0. Dataset com Mascara Virtual'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'mobility'  # Cenário a ser analisado
+cenario = 'static'  # Cenário a ser analisado
 
 # Variável para definir se os gráficos e resultados serão feitos por cada tipo de ppe_id ou pela média
 por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela média
 
 # Variável para escolher se arquivos específicos serão considerados
 considerar_arquivos = {
-    "ORT": True,
+    "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
-    "4T": False,
+    "4T": True,
     "3T": False,
     "OUTROS": False
 }
@@ -30,7 +32,6 @@ considerar_arquivos = {
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
     "erro_direcao_por_ancora": False,
-    "erro_direcao_por_arquivo": False,
     "heatmap_erro_direcao": False,
     "grafico_espacial_erro_direcao": True
 }
@@ -279,13 +280,31 @@ def calcular_erro_direcao_por_cenario(cenario):
             # Salvar todos os erros de ângulo azimute
             for _, row in ppe_data.iterrows():
                 for anchor, anchor_id in anchor_mapping.items():
-                    results.append({
-                        'file_name': file_name,
-                        'ppe_id': ppe_id,
-                        'anchor': anchor,
-                        'erro_direcao': row[f'Erro_Dir_{anchor_id}'],
-                    })
+                    if cenario in ['static', 'calibration']:
+                        if 'X_real' in ppe_data.columns and 'Y_real' in ppe_data.columns:
+                            x_real = ppe_data['X_real'].iloc[0]
+                            y_real = ppe_data['Y_real'].iloc[0]
+                            anchor_x = anchor_coords[anchor_id]['x']
+                            anchor_y = anchor_coords[anchor_id]['y']
+                            distancia = ((x_real - anchor_x) ** 2 + (y_real - anchor_y) ** 2) ** 0.5
+                        else:
+                            distancia = None
 
+                        if distancia is not None and distancia > 0.5:
+                            results.append({
+                                'file_name': file_name,
+                                'ppe_id': ppe_id,
+                                'anchor': anchor,
+                                'erro_direcao': row[f'Erro_Dir_{anchor_id}'],
+                            })
+                    else: #mobility
+                        results.append({
+                                'file_name': file_name,
+                                'ppe_id': ppe_id,
+                                'anchor': anchor,
+                                'erro_direcao': row[f'Erro_Dir_{anchor_id}'],
+                            })
+                        
     results_df = pd.DataFrame(results)
     results_df['anchor'] = results_df['anchor'].map(anchor_mapping)
 
@@ -298,13 +317,12 @@ def gerar_graficos(results_df):
     for ppe_id in results_df['ppe_id'].unique():
         ppe_results = results_df[results_df['ppe_id'] == ppe_id]
         erro_data = ppe_results.groupby('anchor')['erro_direcao'].mean()
-        title = f'Erro do Ângulo Direção por Âncora - EPI: {ppe_id}'
+        title = f'Direction Angle Error per Anchor - PPE: {ppe_id}'
         erro_data.plot(kind='bar', figsize=(10, 6), title=title)
-        plt.xlabel('Âncora')
-        plt.ylabel('Erro Médio do Ângulo Direção (graus)')
+        plt.xlabel('Anchor')
+        plt.ylabel('Mean Direction Angle Error (degrees)')
         plt.xticks(rotation=45)
-        plt.show()
-
+        #plt.show()
 
 # Função para gerar heatmap do erro do ângulo azimute
 def gerar_heatmap(results_df):
@@ -320,13 +338,76 @@ def gerar_heatmap(results_df):
         )
         
         plt.figure(figsize=(12, 8))
-        sns.heatmap(heatmap_data, annot=True, cmap='coolwarm', fmt=".1f", cbar_kws={'label': 'Erro Médio (graus)'})
-        plt.title(f'Heatmap do Erro do Ângulo Direção por Arquivo e Âncora - EPI: {ppe_id}')
-        plt.xlabel('Âncora')
-        plt.ylabel('Arquivo')
+        sns.heatmap(heatmap_data, annot=True, cmap='coolwarm', fmt=".1f", cbar_kws={'label': 'Mean Error (degrees)'})
+        plt.title(f'Heatmap of Direction Angle Error by File and Anchor - PPE: {ppe_id}')
+        plt.xlabel('Anchor')
+        plt.ylabel('File')
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.show()
+
+def plot_heatmap_ancora(results_df, data_path, radius=0.85, grid_res=200):
+    anchors = list(anchor_coords.keys())
+    for ppe_id in results_df['ppe_id'].unique():
+        ppe_results = results_df[results_df['ppe_id'] == ppe_id]
+        for anchor in anchors:
+            fig, ax = plt.subplots(figsize=(12, 10))
+            coords = anchor_coords[anchor]
+
+            # Filtrar resultados para esta ancora e ppe_id
+            anchor_results = ppe_results[ppe_results['anchor'] == anchor]
+            # Calcular a média do erro de azimute para cada âncora e posição
+            mean_results = anchor_results.groupby(['anchor', 'file_name', 'ppe_id']).agg({'erro_direcao': 'mean'}).reset_index()
+
+            xs, ys, errors = [], [], []
+            for _, row in mean_results.iterrows():
+                file_name = row['file_name']
+                data_file_path = os.path.join(data_path, file_name)
+                data_df = pd.read_csv(data_file_path)
+                data_df = normalizar_ppe_ids(data_df)
+                try:
+                    test_position = data_df[data_df['ppeID'] == row['ppe_id']][['X_real', 'Y_real']].iloc[0]
+                    x_real, y_real = test_position['X_real'], test_position['Y_real']
+                    xs.append(x_real)
+                    ys.append(y_real)
+                    errors.append(row['erro_direcao'])
+                except Exception:
+                    continue
+
+            if len(xs) < 3:
+                ax.set_title(f"Anchor A{anchor} (poucos pontos)")
+                ax.imshow(img, extent=[0, -10.70, 8.8, 0], alpha=0.5)
+                ax.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor}')
+                plt.tight_layout()
+                plt.suptitle(f'Heatmap Espacial por Âncora - PPE_ID: {ppe_id}', fontsize=16)
+                plt.show()
+                continue
+
+            xs, ys, errors = np.array(xs), np.array(ys), np.array(errors)
+            xi = np.linspace(xs.min(), xs.max(), grid_res)
+            yi = np.linspace(ys.min(), ys.max(), grid_res)
+            xi, yi = np.meshgrid(xi, yi)
+            zi = griddata((xs, ys), errors, (xi, yi), method='linear')
+
+            # Máscara para interpolar só perto dos pontos conhecidos
+            tree = cKDTree(np.c_[xs, ys])
+            dist, _ = tree.query(np.c_[xi.ravel(), yi.ravel()])
+            mask = dist.reshape(xi.shape) <= radius
+            zi_masked = np.where(mask, zi, np.nan)
+
+            ax.imshow(img, extent=[0, -10.70, 8.8, 0], alpha=0.5)
+            pcm = ax.pcolormesh(xi, yi, zi_masked, cmap='coolwarm', shading='auto', alpha=0.7, vmin=0, vmax=50)
+            ax.scatter(xs, ys, c=errors, cmap='coolwarm', edgecolor='k', s=60, vmin=0, vmax=50)
+            ax.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor}')
+            ax.text(coords['x'], coords['y'] + 0.3, f'A{anchor}', fontsize=10, color='red', ha='center')
+            ax.set_title(f"Heatmap Anchor A{anchor} (Erro Azimute)")
+            ax.set_xlabel("X-axis (meters)")
+            ax.set_ylabel("Y-axis (meters)")
+            fig.colorbar(pcm, ax=ax, orientation='vertical', fraction=0.02, label='Erro Azimute (graus)')
+            plt.tight_layout()
+            plt.suptitle(f'Heatmap Espacial por Âncora - PPE_ID: {ppe_id}', fontsize=16)
+            plt.show()
+
 
 # Função para gerar gráfico espacial do erro médio do ângulo azimute
 def gerar_grafico_espacial_erro_direcao(results_df, data_path):
@@ -344,8 +425,8 @@ def gerar_grafico_espacial_erro_direcao(results_df, data_path):
 
         # Iterar sobre as figuras
         for fig_idx in range(num_figures):
-            fig, axes = plt.subplots(2, 2, figsize=(12, 10))  # 2x2 grid para cada figura
-            axes = axes.flatten()  # Transformar em uma lista para fácil iteração
+            fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+            axes = axes.flatten()
             
             # Iterar sobre as âncoras para a figura atual
             for subplot_idx in range(subplots_per_figure):
@@ -361,7 +442,7 @@ def gerar_grafico_espacial_erro_direcao(results_df, data_path):
                 ax.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor}')
                 ax.text(coords['x'], coords['y'] + 0.3, f'A{anchor}', fontsize=10, color='red', ha='center')
                 
-                # Filtrar os resultados para a âncora atual
+                # Filtrar os resultados para the âncora atual
                 anchor_results = mean_results[mean_results['anchor'] == anchor]
                 
                 # Plotar as posições dos testes e sobrepor os erros médios de azimute
@@ -396,7 +477,7 @@ def gerar_grafico_espacial_erro_direcao(results_df, data_path):
             # Ajustar layout e exibir a figura
             plt.tight_layout()
             if ppe_id:
-                plt.suptitle(f'Gráfico Espacial - PPE_ID: {ppe_id}', fontsize=12)
+                plt.suptitle(f'Spatial Plot - PPE: {ppe_id}', fontsize=12)
             plt.show()
 
 from matplotlib.animation import PillowWriter
@@ -419,120 +500,11 @@ if plotar_graficos["heatmap_erro_direcao"]:
 if plotar_graficos["grafico_espacial_erro_direcao"]:
     if cenario in ['calibration', 'static']:
         gerar_grafico_espacial_erro_direcao(results_erro_direcao_df, os.path.join(base_path, cenario_to_folder[cenario], 'Data IQ'))
+        # Chamar o heatmap de erro de azimute por ancora
+        plot_heatmap_ancora(results_erro_direcao_df, os.path.join(base_path, cenario_to_folder[cenario], 'Data IQ'))
     elif cenario == 'mobility':
         for ppe_id in results_erro_direcao_df['ppe_id'].unique():
             ppe_results = results_erro_direcao_df[results_erro_direcao_df['ppe_id'] == ppe_id]
-            
-            for file_name in ppe_results['file_name'].unique():
-                gif_frames = []  # Lista para armazenar os frames do GIF para o arquivo atual
-                file_results = ppe_results[ppe_results['file_name'] == file_name]
-                data_file_path = os.path.join(base_path, cenario_to_folder[cenario], 'Data IQ', file_name)
-                data_df = pd.read_csv(data_file_path)
-                data_df = normalizar_ppe_ids(data_df)
-                data_df = calcular_angulo_real(data_df, anchor_coords, file_name)
-                
-                # Iterar sobre cada linha do data_df para plotar as linhas de azimute real e medido
-                for _, data_row in data_df[data_df['ppeID'] == ppe_id].iterrows():
-                    x_real, y_real = data_row['X_real'], data_row['Y_real']
-
-                    fig, ax = plt.subplots(figsize=(10, 8))
-                    ax.imshow(img, extent=[0, -10.70, 8.8, 0])  # Ajustar os limites do eixo com base no sistema fornecido
-                
-                    # Plotar âncoras
-                    for anchor_id, coords in anchor_coords.items():
-                        ax.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor_id}')
-                        ax.text(coords['x'], coords['y'] + 0.3, f'A{anchor_id}', fontsize=10, color='red', ha='center')
-                    
-                    for anchor_id, coords in anchor_coords.items():
-                        # Verificar se o valor medido do azimute existe antes de plotar
-                        if not np.isnan(data_row.get(f'Azim_{anchor_id}', np.nan)):
-                            # Linha do azimute real
-                            real_azimuth_x = [x_real, coords['x']]
-                            real_azimuth_y = [y_real, coords['y']]
-
-                            ax.plot(
-                                real_azimuth_x, real_azimuth_y, 
-                                color='blue', linestyle='--', linewidth=2, alpha=0.8, 
-                                label='Azimute Real' if anchor_id == 1 else ""
-                            )
-
-                            # Para arquivos ORT e ancoras 1-4, usar lado e elevação
-                            if file_name.startswith('ORT') and anchor_id in [1, 2, 3, 4]:
-                                elev = data_row.get(f'Elev_{anchor_id}', np.nan)
-                                if not np.isnan(elev):
-                                    # Determinar lado (esquerda/direita) a partir do azimute medido
-                                    azim = data_row.get(f'Azim_{anchor_id}', np.nan)
-                                    azim_mod = np.abs(np.rad2deg(azim))
-                                    lado = 'esquerda' if azim_mod < 90 else 'direita'
-                                    # Definir o sentido do vetor a partir da ancora
-                                    azimuth_length = 10
-                                    # Para lado esquerda, ângulo é elev; para direita, é -elev
-                                    #angle = elev if lado == 'esquerda' else 180-elev
-                                    if lado == 'direita':
-                                        measured_azimuth_x = [
-                                            coords['x'],
-                                            coords['x'] - azimuth_length * np.cos(elev)
-                                        ]
-                                    else:
-                                        measured_azimuth_x = [
-                                            coords['x'],
-                                            coords['x'] + azimuth_length * np.cos(elev)
-                                        ]
-                                    if anchor_id in [2,3]:
-                                        measured_azimuth_y = [
-                                            coords['y'],
-                                            coords['y'] - azimuth_length * np.sin(elev)
-                                        ]
-                                    else:
-                                        measured_azimuth_y = [
-                                            coords['y'],
-                                            coords['y'] + azimuth_length * np.sin(elev)
-                                        ]
-                                    ax.plot(
-                                        measured_azimuth_x, measured_azimuth_y, 
-                                        color='green', linestyle='-', linewidth=2, alpha=0.8, 
-                                        label='Azimute Medido' if anchor_id == 1 else ""
-                                    )
-                            else:
-                                # Linha do azimute medido saindo de cada âncora com comprimento arbitrário
-                                azimuth_length = 10  # Comprimento arbitrário da linha do azimute
-                                measured_azimuth_x = [
-                                    coords['x'],
-                                    coords['x'] + azimuth_length * np.cos(data_row[f'Azim_{anchor_id}'])
-                                ]
-                                measured_azimuth_y = [
-                                    coords['y'],
-                                    coords['y'] - azimuth_length * np.sin(data_row[f'Azim_{anchor_id}'])
-                                ]
-                                ax.plot(
-                                    measured_azimuth_x, measured_azimuth_y, 
-                                    color='green', linestyle='-', linewidth=2, alpha=0.8, 
-                                    label='Azimute Medido' if anchor_id == 1 else ""
-                                )
-                
-                    # Configurar título e layout
-                    ax.set_title(f'Gráfico Espacial - PPE_ID: {ppe_id}, Arquivo: {file_name}, Posição: ({x_real:.2f}, {y_real:.2f})')
-                    ax.set_xlabel("X-axis (meters)")
-                    ax.set_ylabel("Y-axis (meters)")
-                    ax.set_xlim((0, -10.70))   
-                    ax.set_ylim(8.8, 0)     
-                    plt.tight_layout()
-                    plt.show()
-
-                #     # Salvar o frame na lista
-                #     fig.canvas.draw()
-                #     frame = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
-                #     frame = frame.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-                #     gif_frames.append(frame)
-                #     plt.close(fig)
-
-                # # Criar o GIF para o arquivo atual usando Pillow
-                # from PIL import Image
-                # gif_images = [Image.fromarray(frame) for frame in gif_frames]
-                # gif_images[0].save(
-                #     f'grafico_espacial_{file_name}.gif', 
-                #     save_all=True, 
-                #     append_images=gif_images[1:], 
-                #     duration=500, 
-                #     loop=0
-                # )
+            # Chamar o heatmap de erro de azimute por ancora para cada ppe_id
+            #plot_heatmap_ancora(ppe_results, os.path.join(base_path, cenario_to_folder[cenario], 'Data IQ'), ppe_id=ppe_id)
+            # ...existing code...

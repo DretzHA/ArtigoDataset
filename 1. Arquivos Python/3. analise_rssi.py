@@ -12,7 +12,7 @@ import matplotlib.image as mpimg
 base_path = '0. Dataset com Mascara Virtual'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'static'  # Cenário a ser analisado
+cenario = 'calibration'  # Cenário a ser analisado
 
 # Variável para definir se os gráficos e resultados serão feitos por cada tipo de ppe_id ou pela média
 por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela média
@@ -29,9 +29,9 @@ considerar_arquivos = {
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
-    "erro_azimute_por_ancora": False,
-    "erro_azimute_por_arquivo": False,
-    "heatmap_erro_azimute": False,
+    "erro_azimute_por_ancora": True,
+    "erro_azimute_por_arquivo": True,
+    "heatmap_erro_azimute": True,
     "grafico_espacial_erro_azimute": True
 }
 

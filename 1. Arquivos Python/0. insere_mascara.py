@@ -43,58 +43,58 @@ azimuth_ranges_rad = {
     for min_angle, max_angle in [value]
 }
 
-# Ensure the output folder exists
-os.makedirs(output_folder, exist_ok=True)
+# # Ensure the output folder exists
+# os.makedirs(output_folder, exist_ok=True)
 
-# Iterate through all files in the input folder
-for filename in os.listdir(input_folder):
-    if filename.endswith(".csv"):  # Process only CSV files
-        input_path = os.path.join(input_folder, filename)
-        output_path = os.path.join(output_folder, filename)
+# # Iterate through all files in the input folder
+# for filename in os.listdir(input_folder):
+#     if filename.endswith(".csv"):  # Process only CSV files
+#         input_path = os.path.join(input_folder, filename)
+#         output_path = os.path.join(output_folder, filename)
 
-        # Check if the file name contains "ORT"
-        if "ORT" in filename:
-            # Load the CSV file into a DataFrame
-            df = pd.read_csv(input_path)
-            # Apply the mask only to Azim_6: abs(angle) > 70
-            if "Azim_6" in df.columns:
-                df["Azim_6"] = df["Azim_6"].apply(
-                    lambda x: x if abs(x) > math.radians(70) else np.nan
-                )
-                # Save the modified DataFrame to the output folder
-                df.to_csv(output_path, index=False)
-            continue
+#         # Check if the file name contains "ORT"
+#         if "ORT" in filename:
+#             # Load the CSV file into a DataFrame
+#             df = pd.read_csv(input_path)
+#             # Apply the mask only to Azim_6: abs(angle) > 70
+#             if "Azim_6" in df.columns:
+#                 df["Azim_6"] = df["Azim_6"].apply(
+#                     lambda x: x if abs(x) > math.radians(70) else np.nan
+#                 )
+#                 # Save the modified DataFrame to the output folder
+#                 df.to_csv(output_path, index=False)
+#             continue
 
-        # Load the CSV file into a DataFrame
-        df = pd.read_csv(input_path)
+#         # Load the CSV file into a DataFrame
+#         df = pd.read_csv(input_path)
 
-        # Apply the mask to azimuth columns
-        for i in range(1, 8):  # Columns Azim_1 to Azim_7
-            column_name = f"Azim_{i}"
-            if column_name in df.columns:
-                if column_name == "Azim_2":
-                    min_angle, max_angle = azimuth_ranges_rad[column_name]
-                    # Special condition for Azim_2: reject angles between -75 and 90
-                    df[column_name] = df[column_name].apply(
-                        lambda x: x if not (math.radians(min_angle) <= x <= math.radians(max_angle)) else np.nan
-                    )
-                elif column_name == "Azim_6":
-                    # Special condition for Azim_6: abs(angle) > 70
-                    df[column_name] = df[column_name].apply(
-                        lambda x: x if abs(x) > math.radians(70) else np.nan
-                    )
-                elif column_name in azimuth_ranges_rad:
-                    # Apply range-based mask for other azimuths with defined ranges
-                    min_angle, max_angle = azimuth_ranges_rad[column_name]
-                    df[column_name] = df[column_name].apply(
-                        lambda x: x if min_angle <= x <= max_angle else np.nan
-                    )
-                else:
-                    # Skip filtering for Azim_4, Azim_5, and Azim_7
-                    continue
+#         # Apply the mask to azimuth columns
+#         for i in range(1, 8):  # Columns Azim_1 to Azim_7
+#             column_name = f"Azim_{i}"
+#             if column_name in df.columns:
+#                 if column_name == "Azim_2":
+#                     min_angle, max_angle = azimuth_ranges_rad[column_name]
+#                     # Special condition for Azim_2: reject angles between -75 and 90
+#                     df[column_name] = df[column_name].apply(
+#                         lambda x: x if not (math.radians(min_angle) <= x <= math.radians(max_angle)) else np.nan
+#                     )
+#                 elif column_name == "Azim_6":
+#                     # Special condition for Azim_6: abs(angle) > 70
+#                     df[column_name] = df[column_name].apply(
+#                         lambda x: x if abs(x) > math.radians(70) else np.nan
+#                     )
+#                 elif column_name in azimuth_ranges_rad:
+#                     # Apply range-based mask for other azimuths with defined ranges
+#                     min_angle, max_angle = azimuth_ranges_rad[column_name]
+#                     df[column_name] = df[column_name].apply(
+#                         lambda x: x if min_angle <= x <= max_angle else np.nan
+#                     )
+#                 else:
+#                     # Skip filtering for Azim_4, Azim_5, and Azim_7
+#                     continue
 
-        # Save the modified DataFrame to the output folder
-        df.to_csv(output_path, index=False)
+#         # Save the modified DataFrame to the output folder
+#         df.to_csv(output_path, index=False)
 
 def plot_anchors_with_ranges(anchor_coords, azimuth_ranges_deg, img_path):
     img = mpimg.imread(img_path)
@@ -148,7 +148,7 @@ def plot_anchors_with_ranges(anchor_coords, azimuth_ranges_deg, img_path):
     ax.set_ylim(8.8, 0)
     ax.set_xlabel("X (m)")
     ax.set_ylabel("Y (m)")
-    plt.title("Região de Range de Cada Âncora")
+    plt.title("Direction Ranges")
     plt.tight_layout()
     plt.show()
 

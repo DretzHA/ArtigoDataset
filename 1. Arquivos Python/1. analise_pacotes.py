@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import seaborn as sns
 import numpy as np
+from scipy.interpolate import griddata
+from scipy.spatial import cKDTree
 
 '''Arquivo para processar e analisar a perda dos pacotes do Dataset'''
 
@@ -12,18 +14,18 @@ import numpy as np
 base_path = '0. Dataset com Mascara Virtual'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'calibration'  # Cenário a ser analisado
+cenario = 'static'  # Cenário a ser analisado
 
 # Total esperado de pacotes
 total_esperado = 181
 
 # Variável para escolher se arquivos específicos serão considerados
 considerar_arquivos = {
-    "ORT": False,
+    "ORT": True,
     "SYLABS": False,
     "UBLOX": False,
     "4T": False,
-    "3T": True,
+    "3T": False,
     "OUTROS": False
 }
 
@@ -259,13 +261,76 @@ def gerar_graficos(results_df, tipo='nao_processados'):
         ppe_results = results_df[results_df['ppe_id'] == ppe_id]
         if tipo == 'nao_processados':
             loss_data = ppe_results.groupby('anchor')['nao_processados_loss_percentage'].mean()
-            title = f'Perda de Pacotes por Âncora (Não Processados) - PPE_ID: {ppe_id}'
+            title = f'Packet Loss per Anchor (Not Processed) - PPE_ID: {ppe_id}'
         elif tipo == 'nao_recebidos':
             loss_data = ppe_results.groupby('anchor')['nao_recebidos_loss_percentage'].mean()
-            title = f'Perda de Pacotes por Âncora (Não Recebidos) - PPE_ID: {ppe_id}'
+            title = f'Packet Loss per Anchor (Not Received) - PPE_ID: {ppe_id}'
         loss_data.plot(kind='bar', figsize=(10, 6), title=title)
-        plt.xlabel('Âncora')
-        plt.ylabel('Porcentagem de Perda (%)')
+        plt.xlabel('Anchor')
+        plt.ylabel('Loss Percentage (%)')
+        plt.show()
+
+def plot_heatmap_ancora(results_df, data_path, tipo='nao_processados', ppe_id=None, radius=0.85, grid_res=200):
+    anchors = list(anchor_coords.keys())
+    for anchor in anchors:
+        fig, ax = plt.subplots(figsize=(12, 10))
+        coords = anchor_coords[anchor]
+
+        # Filtrar resultados para esta ancora
+        anchor_results = results_df[results_df['anchor'] == anchor]
+        xs, ys, losses = [], [], []
+        for _, row in anchor_results.iterrows():
+            file_name = row['file_name']
+            data_file_path = os.path.join(data_path, file_name)
+            data_df = pd.read_csv(data_file_path)
+            data_df = normalizar_ppe_ids(data_df)
+            try:
+                test_position = data_df[data_df['ppeID'] == row['ppe_id']][['X_real', 'Y_real']].iloc[0]
+                x_real, y_real = test_position['X_real'], test_position['Y_real']
+                xs.append(x_real)
+                ys.append(y_real)
+                if tipo == 'nao_processados':
+                    losses.append(row['nao_processados_loss_percentage'])
+                else:
+                    losses.append(row['nao_recebidos_loss_percentage'])
+            except Exception:
+                continue
+
+        if len(xs) < 3:
+            ax.set_title(f"Anchor A{anchor} (poucos pontos)")
+            ax.imshow(img, extent=[0, -10.70, 8.8, 0], alpha=0.5)
+            ax.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor}')
+            plt.tight_layout()
+            if ppe_id:
+                plt.suptitle(f'Heatmap Spatial por Âncora - PPE_ID: {ppe_id}', fontsize=16)
+            plt.show()
+            continue
+
+        xs, ys, losses = np.array(xs), np.array(ys), np.array(losses)
+        grid_res = 200
+        xi = np.linspace(xs.min(), xs.max(), grid_res)
+        yi = np.linspace(ys.min(), ys.max(), grid_res)
+        xi, yi = np.meshgrid(xi, yi)
+        zi = griddata((xs, ys), losses, (xi, yi), method='linear')
+
+        # Máscara para interpolar só perto dos pontos conhecidos
+        tree = cKDTree(np.c_[xs, ys])
+        dist, _ = tree.query(np.c_[xi.ravel(), yi.ravel()])
+        mask = dist.reshape(xi.shape) <= radius
+        zi_masked = np.where(mask, zi, np.nan)
+
+        ax.imshow(img, extent=[0, -10.70, 8.8, 0], alpha=0.5)
+        pcm = ax.pcolormesh(xi, yi, zi_masked, cmap='coolwarm', shading='auto', alpha=0.7, vmin=0, vmax=50)
+        ax.scatter(xs, ys, c=losses, cmap='coolwarm', edgecolor='k', s=60, vmin=0, vmax=50)
+        ax.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor}')
+        ax.text(coords['x'], coords['y'] + 0.3, f'A{anchor}', fontsize=10, color='red', ha='center')
+        ax.set_title(f"Heatmap Anchor A{anchor}")
+        ax.set_xlabel("X-axis (meters)")
+        ax.set_ylabel("Y-axis (meters)")
+        fig.colorbar(pcm, ax=ax, orientation='vertical', fraction=0.02, label='Loss Percentage (%)')
+        plt.tight_layout()
+        if ppe_id:
+            plt.suptitle(f'Heatmap Spatial por Âncora - PPE_ID: {ppe_id}', fontsize=16)
         plt.show()
 
 # Função para gerar gráficos espaciais com base no controle por_ppe_id
@@ -274,8 +339,8 @@ def gerar_grafico_espacial(results_df, data_path, tipo='nao_processados'):
     for ppe_id in results_df['ppe_id'].unique():
         ppe_results = results_df[results_df['ppe_id'] == ppe_id]
         print(f'Gerando gráfico espacial para PPE_ID: {ppe_id}')
-        gerar_grafico_espacial_por_ppe(ppe_results, data_path, tipo, ppe_id)
-
+        #gerar_grafico_espacial_por_ppe(ppe_results, data_path, tipo, ppe_id)
+        plot_heatmap_ancora(ppe_results, data_path, tipo, ppe_id=ppe_id)
 
 # Função auxiliar para gerar gráficos espaciais
 def gerar_grafico_espacial_por_ppe(results_df, data_path, tipo, ppe_id=None):
@@ -346,7 +411,7 @@ def gerar_grafico_espacial_por_ppe(results_df, data_path, tipo, ppe_id=None):
         # Ajustar layout e exibir a figura
         plt.tight_layout()
         if ppe_id:
-            plt.suptitle(f'Gráfico Espacial - PPE_ID: {ppe_id}', fontsize=16)
+            plt.suptitle(f'Spatial Plot - PPE_ID: {ppe_id}', fontsize=16)
         plt.show()
 
 # Função para gerar gráficos espaciais para o cenário de mobilidade
@@ -391,7 +456,7 @@ def gerar_grafico_espacial_mobility(data_path, results_df, tipo='nao_processados
                     ax.text(x_real, y_real - 0.2, f'{count}', fontsize=8, color=color, ha='center')
 
             # Configurações do gráfico
-            ax.set_title(f'Gráfico Espacial - {tipo.capitalize()} - PPE_ID: {ppe_id} - Arquivo: {file_name}')
+            ax.set_title(f'Spatial Plot - {tipo.replace("_", " ").title()} - PPE_ID: {ppe_id} - File: {file_name}')
             ax.set_xlabel('X-axis (meters)')
             ax.set_ylabel('Y-axis (meters)')
             plt.tight_layout()
@@ -421,16 +486,16 @@ if plotar_graficos["nao_processados_e_recebidos"]:
 
         # Gráfico de Não Processados
         loss_data_nao_processados = ppe_results_nao_processados.groupby('anchor')['nao_processados_loss_percentage'].mean()
-        ax.bar(loss_data_nao_processados.index - 0.2, loss_data_nao_processados, width=0.4, label='Não Processados', color='blue')
+        ax.bar(loss_data_nao_processados.index - 0.2, loss_data_nao_processados, width=0.4, label='Not Processed', color='blue')
 
         # Gráfico de Não Recebidos
         loss_data_nao_recebidos = ppe_results_nao_recebidos.groupby('anchor')['nao_recebidos_loss_percentage'].mean()
-        ax.bar(loss_data_nao_recebidos.index + 0.2, loss_data_nao_recebidos, width=0.4, label='Não Recebidos', color='orange')
+        ax.bar(loss_data_nao_recebidos.index + 0.2, loss_data_nao_recebidos, width=0.4, label='Not Received', color='orange')
 
         # Configurações do gráfico
-        ax.set_xlabel('Âncora')
-        ax.set_ylabel('Porcentagem de Perda (%)')
-        ax.set_title(f'Perda de Pacotes por Âncora (Não Processados e Não Recebidos) - PPE_ID: {ppe_id}')
+        ax.set_xlabel('Anchor')
+        ax.set_ylabel('Loss Percentage (%)')
+        ax.set_title(f'Packet Loss per Anchor (Not Processed & Not Received) - PPE_ID: {ppe_id}')
         ax.set_xticks(loss_data_nao_processados.index)
         ax.legend()
 
@@ -451,10 +516,10 @@ if plotar_graficos["heatmap_nao_processados"]:
 
         # Criar o heatmap para Não Processados
         plt.figure(figsize=(12, 8))
-        sns.heatmap(heatmap_nao_processados, annot=True, cmap='coolwarm', fmt=".1f", cbar_kws={'label': 'Porcentagem de Perda (%)'})
-        plt.title(f'Heatmap de Perda de Pacotes (Não Processados) por Arquivo de Teste - PPE_ID: {ppe_id}')
-        plt.xlabel('Âncora')
-        plt.ylabel('Arquivo de Teste')
+        sns.heatmap(heatmap_nao_processados, annot=True, cmap='coolwarm', fmt=".1f", cbar_kws={'label': 'Loss Percentage (%)'})
+        plt.title(f'Packet Loss Heatmap (Not Processed) by Test File - PPE_ID: {ppe_id}')
+        plt.xlabel('Anchor')
+        plt.ylabel('Test File')
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.show()
@@ -471,10 +536,10 @@ if plotar_graficos["heatmap_nao_recebidos"]:
 
         # Criar o heatmap para Não Recebidos
         plt.figure(figsize=(12, 8))
-        sns.heatmap(heatmap_periodic_sync, annot=True, cmap='coolwarm', fmt=".1f", cbar_kws={'label': 'Porcentagem de Perda (%)'})
-        plt.title(f'Heatmap de Perda de Pacotes (Não Recebidos) por Arquivo de Teste - PPE_ID: {ppe_id}')
-        plt.xlabel('Âncora')
-        plt.ylabel('Arquivo de Teste')
+        sns.heatmap(heatmap_periodic_sync, annot=True, cmap='coolwarm', fmt=".1f", cbar_kws={'label': 'Loss Percentage (%)'})
+        plt.title(f'Packet Loss Heatmap (Not Received) by Test File - PPE_ID: {ppe_id}')
+        plt.xlabel('Anchor')
+        plt.ylabel('Test File')
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.show()
