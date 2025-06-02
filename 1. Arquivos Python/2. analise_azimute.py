@@ -14,7 +14,7 @@ from scipy.spatial import cKDTree
 base_path = '0. Dataset com Mascara Virtual'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'static'  # Cenário a ser analisado
+cenario = 'mobility'  # Cenário a ser analisado
 
 # Variável para definir se os gráficos e resultados serão feitos por cada tipo de ppe_id ou pela média
 por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela média
@@ -24,9 +24,9 @@ considerar_arquivos = {
     "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
-    "4T": True,
+    "4T": False,
     "3T": False,
-    "OUTROS": False
+    "OUTROS": True
 }
 
 # Variáveis para definir quais gráficos serão plotados
