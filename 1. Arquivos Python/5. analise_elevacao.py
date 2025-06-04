@@ -12,7 +12,7 @@ import math
 base_path = '0. Dataset com Mascara Virtual'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'mobility'  # Cenário a ser analisado
+cenario = 'static'  # Cenário a ser analisado
 
 # Variável para definir se os gráficos e resultados serão feitos por cada tipo de ppe_id ou pela média
 por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela média
@@ -22,9 +22,9 @@ considerar_arquivos = {
     "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
-    "4T": False,
+    "4T": True,
     "3T": False,
-    "OUTROS": True
+    "OUTROS": False
 }
 
 # Variáveis para definir quais gráficos serão plotados
@@ -59,22 +59,22 @@ anchor_mapping = {
 
 # Coordenadas das âncoras (valores padrão)
 anchor_coords = {
-    1: {'x': -1.00, 'y': 7.83},  # A01
-    2: {'x': -0.96, 'y': 1.22},  # A02
-    3: {'x': -5.81, 'y': 7.85},  # A03
-    4: {'x': -3.50, 'y': 4.60},  # A04
-    5: {'x': -5.76, 'y': 4.64},  # A05
-    6: {'x': -0.98, 'y': 4.54},  # A06
-    7: {'x': -5.85, 'y': 1.21},  # A07
+    1: {'x': -1.00, 'y': 7.83, 'z': 2.41},  # A01
+    2: {'x': -0.96, 'y': 1.22, 'z': 2.41},  # A02
+    3: {'x': -5.81, 'y': 7.85, 'z': 2.41},  # A03
+    4: {'x': -3.50, 'y': 4.60, 'z': 2.41},  # A04
+    5: {'x': -5.76, 'y': 4.64, 'z': 2.41},  # A05
+    6: {'x': -0.98, 'y': 4.54, 'z': 2.41},  # A06
+    7: {'x': -5.85, 'y': 1.21, 'z': 2.41},  # A07
 }
 
 # Atualizar coordenadas das âncoras se ORT estiver habilitado
 if considerar_arquivos["ORT"]:
     anchor_coords.update({
-        1: {'x': -0.84, 'y': 0.54},  # A01
-        2: {'x': -7.14, 'y': 7.74},  # A02
-        3: {'x': -1.14, 'y': 7.74},  # A03
-        4: {'x': -7.74, 'y': 0.84},  # A04
+        1: {'x': -0.84, 'y': 0.54, 'z': 1.95},  # A01
+        2: {'x': -7.14, 'y': 7.74, 'z': 1.95},  # A02
+        3: {'x': -1.14, 'y': 7.74, 'z': 1.95},  # A03
+        4: {'x': -7.74, 'y': 0.84, 'z': 1.95},  # A04
     })
 
 # Função para filtrar arquivos com base na variável considerar_arquivos
@@ -137,28 +137,14 @@ def calcular_angulo_real(ppe_data, anchor_coords, file_name):
             dist = np.sqrt(dx**2 + dy**2 + dz**2)
             if file_name.startswith('ORT'):
                 if anchor_id in [5, 6, 7]:
-                    real_angle = np.arccos(dz / dist)
+                    real_angle = abs(np.arcsin(dz / dist))
 
                 elif anchor_id in [1, 2, 3, 4]:
 
-                    ladoh = 'direita' if coords['x'] > x_real else 'esquerda'
-                    ladov = 'cima' if coords['y'] > y_real else 'baixo'
-
-                    # Calcular o ângulo entre a âncora e o ponto de teste
-                    if ladoh == 'direita':
-                        if ladov == 'cima':
-                            real_angle = math.pi + math.atan2(dy, dx)
-                        else:
-                            real_angle = math.pi - math.atan2(dy, dx)
-                    elif ladoh == 'esquerda':
-                        if ladov == 'cima':
-                            real_angle = -math.atan2(dy, dx)
-                        else:
-                            real_angle = math.atan2(dy, dx)
-                    
+                    real_angle= np.nan                    
             else:
                 # Default formula
-                real_angle = np.arccos(dz / dist)
+                real_angle = abs(np.arcsin(dz / dist))
             
             ppe_data.at[index, f'Real_Elev_{anchor_id}'] = real_angle
     
@@ -166,80 +152,18 @@ def calcular_angulo_real(ppe_data, anchor_coords, file_name):
 
 # Função para calcular o erro do ângulo azimute
 def calcular_erro_direcao(ppe_data, file_name):
-    # Iterar sobre cada âncora para calcular o erro do ângulo azimute
+    # Para cada âncora, calcular o erro em graus entre Elev_{anchor_id} e Real_Elev_{anchor_id}
     for anchor_id in anchor_coords.keys():
-        if file_name.startswith('ORT'):
-            if anchor_id in [5, 6, 7]:
-                # Calcular erro linha a linha
-                erros = []
-                for idx, row in ppe_data.iterrows():
-                    real_azim = row.get(f'Real_Dir_{anchor_id}', np.nan)
-                    azim = row.get(f'Azim_{anchor_id}', np.nan)
-                    if not np.isnan(real_azim) and not np.isnan(azim):
-                        erro = np.rad2deg(
-                            np.arctan2(
-                                np.sin(real_azim - azim),
-                                np.cos(real_azim - azim)
-                            )
-                        )
-                        erro = (erro + 180) % 360 - 180
-                        erro = abs(erro)
-                    else:
-                        erro = np.nan
-                    erros.append(erro)
-                ppe_data[f'Erro_Dir_{anchor_id}'] = erros
-            elif anchor_id in [1, 2, 3, 4]:
-                # Para ancoras 1,2,3,4, considerar o ângulo de elevação e o azimute linha a linha
-                erros = []
-                for idx, row in ppe_data.iterrows():
-                    azim = row.get(f'Azim_{anchor_id}', np.nan)
-                    elev = row.get(f'Elev_{anchor_id}', np.nan)
-                    real_azim = row.get(f'Real_Dir_{anchor_id}', np.nan)
-                    if not (np.isnan(elev) or np.isnan(azim) or np.isnan(real_azim)):
-                        azim_mod = np.abs(np.rad2deg(azim))
-                        # Determinar lado para cada ancora
-                        lado_medido = 'esquerda' if azim_mod < 90 else 'direita'
-                        lado_real = row.get(f'LadoH_{anchor_id}', np.nan)
-                        #erro_lado = 0 if lado_medido == lado_real else 90
-                        if lado_medido == lado_real:
-                            # Calcular erro do ângulo de elevação
-                            erro = np.abs(np.rad2deg(np.arctan2(
-                                np.sin(real_azim - elev),
-                                np.cos(real_azim - elev)
-                            )))
-                            erro = (erro + 180) % 360 - 180
-                            erro = abs(erro)
-                        
-                        else:
-                            erro = (90-math.degrees(row[f'Real_Dir_{anchor_id}']))+(90-math.degrees(elev))
-                            erro = (erro + 180) % 360 - 180
-                            erro = abs(erro)
-                    else:
-                        erro = np.nan
-                    
-                    erros.append(erro)
-                ppe_data[f'Erro_Dir_{anchor_id}'] = erros
-            else:
-                ppe_data[f'Erro_Dir_{anchor_id}'] = np.nan
+        elev_col = f'Elev_{anchor_id}'
+        real_elev_col = f'Real_Elev_{anchor_id}'
+        erro_col = f'Erro_Elev_{anchor_id}'
+        if elev_col in ppe_data.columns and real_elev_col in ppe_data.columns:
+            # Calcula diferença em radianos, converte para graus
+            erro = np.degrees(ppe_data[elev_col] - ppe_data[real_elev_col])
+            ppe_data[erro_col] = abs(erro)
         else:
-            # Calcular erro linha a linha para outros arquivos
-            erros = []
-            for idx, row in ppe_data.iterrows():
-                real_azim = row.get(f'Real_Dir_{anchor_id}', np.nan)
-                azim = row.get(f'Azim_{anchor_id}', np.nan)
-                if not np.isnan(real_azim) and not np.isnan(azim):
-                    erro = np.rad2deg(
-                        np.arctan2(
-                            np.sin(real_azim - azim),
-                            np.cos(real_azim - azim)
-                        )
-                    )
-                    erro = (erro + 180) % 360 - 180
-                    erro = abs(erro)
-                else:
-                    erro = np.nan
-                erros.append(erro)
-            ppe_data[f'Erro_Dir_{anchor_id}'] = erros
+            # Se não existir, preenche com NaN
+            ppe_data[erro_col] = np.nan
     return ppe_data
 
 # Função para calcular o erro do ângulo azimute por cenário
@@ -278,9 +202,11 @@ def calcular_erro_direcao_por_cenario(cenario):
                         if 'X_real' in ppe_data.columns and 'Y_real' in ppe_data.columns:
                             x_real = ppe_data['X_real'].iloc[0]
                             y_real = ppe_data['Y_real'].iloc[0]
+                            z_real = ppe_data['Z_real'].iloc[0]
                             anchor_x = anchor_coords[anchor_id]['x']
                             anchor_y = anchor_coords[anchor_id]['y']
-                            distancia = ((x_real - anchor_x) ** 2 + (y_real - anchor_y) ** 2) ** 0.5
+                            anchor_z = anchor_coords[anchor_id]['z']
+                            distancia = ((x_real - anchor_x) ** 2 + (y_real - anchor_y) ** 2 + (z_real - anchor_z) ** 2) ** 0.5
                         else:
                             distancia = None
 
@@ -303,3 +229,6 @@ def calcular_erro_direcao_por_cenario(cenario):
     results_df['anchor'] = results_df['anchor'].map(anchor_mapping)
 
     return results_df
+
+results_erro_direcao_df = calcular_erro_direcao_por_cenario(cenario)
+print()

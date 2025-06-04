@@ -1,23 +1,62 @@
 import os
 import pandas as pd
 import math
+import numpy as np
 
-# #### teste para ver angulo real
-# #Coordenadas das ancoras
-# anchor_coords = {
-#     1: {'x': -0.84, 'y': 0.54},  # A01
-#     2: {'x': -7.14, 'y': 7.74},  # A02
-#     3: {'x': -1.14, 'y': 7.74},  # A03
-#     4: {'x': -7.74, 'y': 0.84},  # A04
-# }
 
-# test_coords = {
-#     'C1P1': {'x': -1.14, 'y': 0.39}, 
-#     'C2P3': {'x': -3.54, 'y': 4.44}, 
-#     'C3P1': {'x': -1.14, 'y': 6.84}, 
-#     'C3P5': {'x': -5.94, 'y': 6.84}, 
+#### teste para ver angulo real
+#Coordenadas das ancoras
+anchor_coords = {
+    1: {'x': -1.00, 'y': 7.83, 'z': 2.41},  # A01
+    2: {'x': -0.96, 'y': 1.22, 'z': 2.41},  # A02
+    3: {'x': -5.81, 'y': 7.85, 'z': 2.41},  # A03
+    4: {'x': -3.50, 'y': 4.60, 'z': 2.41},  # A04
+    5: {'x': -5.76, 'y': 4.64, 'z': 2.41},  # A05
+    6: {'x': -0.98, 'y': 4.54, 'z': 2.41},  # A06
+    7: {'x': -5.85, 'y': 1.21, 'z': 2.41},  # A07
+}
+
+test_coords = {
+    'C1P1': {'x': -1.14, 'y': 0.39, 'z': 1.61}, 
+    'C2P3': {'x': -3.54, 'y': 4.44, 'z': 1.61}, 
+    'C3P1': {'x': -1.14, 'y': 6.84, 'z': 1.61}, 
+    'C3P5': {'x': -5.94, 'y': 6.84, 'z': 1.61}, 
+    'A02': {'x': -0.96, 'y': 1.22, 'z': 1.61}, 
+    'A05': {'x': -5.76, 'y': 4.64, 'z': 1.61}, 
     
-# }
+}
+
+
+for test_id, tcoords in test_coords.items(): 
+    for anchor_id, acoords in anchor_coords.items():
+        xa = acoords['x']
+        ya = acoords['y']
+        za = acoords['z']
+        xr = tcoords['x']
+        yr = tcoords['y']
+        zr = tcoords['z']
+
+
+        dy = yr - ya
+        dx = xr - xa
+        dz = zr - za
+
+        dist = np.sqrt(dx**2 + dy**2 + dz**2)
+
+        real_angle = abs(np.arcsin(dz / dist))
+        print(f'Anchor: {anchor_id}, Teste Point: {test_id}, Angulo: {real_angle}, Distancia: {dist:.2f}')
+    print()
+
+
+
+
+
+
+
+
+
+
+
 
 # for anchor_id, acoords in anchor_coords.items():
 #     for test_id, tcoords in test_coords.items(): 
