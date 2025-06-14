@@ -21,21 +21,21 @@ total_esperado = 181
 
 # Variável para escolher se arquivos específicos serão considerados
 considerar_arquivos = {
-    "ORT": True,
+    "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
     "4T": False,
     "3T": False,
-    "OUTROS": False
+    "OUTROS": True
 }
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
-    "nao_processados_e_recebidos": True,
-    "heatmap_nao_processados": True,
-    "heatmap_nao_recebidos": True,
+    "nao_processados_e_recebidos": False,
+    "heatmap_nao_processados": False,
+    "heatmap_nao_recebidos": False,
     "grafico_espacial_nao_processados": True,
-    "grafico_espacial_nao_recebidos": True
+    "grafico_espacial_nao_recebidos": False
 }
 
 
@@ -154,7 +154,7 @@ def calcular_perda_nao_processados(cenario):
         if cenario == 'mobility':
             min_time = data_df['CreateTime'].min()
             max_time = data_df['CreateTime'].max()
-            total_esperado = max_time - min_time
+            total_esperado = round(max_time - min_time)
         else:
             total_esperado = 181  # Valor fixo para calibration e static
 
@@ -237,7 +237,7 @@ def calcular_perda_nao_recebidos(cenario):
                     total_esperado = filtered_result['total_esperado'].iloc[0]
                 else:
                     # Definir um valor padrão ou lidar com o caso de ausência de dados
-                    total_esperado = 181  # Ou outro valor apropriado
+                    total_esperado = 181 
 
                 results.append({
                     'file_name': file_name,
@@ -307,7 +307,7 @@ def plot_heatmap_ancora(results_df, data_path, tipo='nao_processados', ppe_id=No
             continue
 
         xs, ys, losses = np.array(xs), np.array(ys), np.array(losses)
-        grid_res = 200
+        grid_res = 50
         xi = np.linspace(xs.min(), xs.max(), grid_res)
         yi = np.linspace(ys.min(), ys.max(), grid_res)
         xi, yi = np.meshgrid(xi, yi)
@@ -318,6 +318,7 @@ def plot_heatmap_ancora(results_df, data_path, tipo='nao_processados', ppe_id=No
         dist, _ = tree.query(np.c_[xi.ravel(), yi.ravel()])
         mask = dist.reshape(xi.shape) <= radius
         zi_masked = np.where(mask, zi, np.nan)
+        
 
         ax.imshow(img, extent=[0, -10.70, 8.8, 0], alpha=0.5)
         pcm = ax.pcolormesh(xi, yi, zi_masked, cmap='coolwarm', shading='auto', alpha=0.7, vmin=0, vmax=50)
