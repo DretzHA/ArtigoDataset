@@ -211,13 +211,22 @@ def gerar_graficos_rssi_todos_arquivos(results_df, combined_data_df):
                 alpha=1.0, color='red', edgecolor='black', s=100, label='Mean' if 'Mean' not in plt.gca().get_legend_handles_labels()[1] else ""
             )
 
-        plt.title(f'RSSI vs Distance - Anchor {anchor_id}')
-        plt.xlabel('Distance to Anchor (meters)')
-        plt.ylabel('RSSI (dBm)')
-        plt.legend(title='Legend')
+        #plt.title(f'RSSI vs Distance - Anchor {anchor_id}')
+        plt.xlabel('Distance to Anchor (meters)', fontsize=16)
+        plt.ylabel('RSSI (dBm)', fontsize=16)
+        plt.legend(title='Legend', fontsize=14)
+        ax = plt.gca()
+        ax.tick_params(axis='x', labelsize=16)  # Increase fontsize of x-axis anchor numbers
+        ax.tick_params(axis='y', labelsize=16)  # Increase fontsize of y-axis labels
+        # Ajustar layout
+        plt.tight_layout()
+        if anchor_id == 1:
+            plt.savefig('/home/andrey/Desktop/clb_1t_rssi_a1_v2.eps', format='eps', dpi=50)
+        elif anchor_id == 4:
+            plt.savefig('/home/andrey/Desktop/clb_1t_rssi_a4_v2.eps', format='eps', dpi=50)
         plt.grid(True)
         plt.tight_layout()
-        plt.show()
+        #plt.show()
 
 # Function to generate combined plots for all RSSI points and means for each anchor, divided by PPE
 def gerar_graficos_rssi_por_ppe(results_df, combined_data_df):
@@ -227,35 +236,44 @@ def gerar_graficos_rssi_por_ppe(results_df, combined_data_df):
 
         print(f"Generating plots for PPE: {ppe_id}")
         for anchor_id in ppe_results['anchor_id'].unique():
+            if anchor_id not in [1, 4]:
+                continue  # Only process anchors 1 and 4
+
             anchor_data = ppe_results[ppe_results['anchor_id'] == anchor_id]
 
             plt.figure(figsize=(12, 8))
 
             # Plot all RSSI points from all files for the current PPE
             for i, row in ppe_data.iterrows():
-                if i % 5 == 0:  # Plot every 5th point
-                    if not pd.isna(row[f'Dist_Anchor_{anchor_id}']) and not pd.isna(row[f'RSSI_{anchor_id}']):
+                if i % 5 == 0:
+                    if not pd.isna(row.get(f'Dist_Anchor_{anchor_id}')) and not pd.isna(row.get(f'RSSI_{anchor_id}')):
                         plt.scatter(
-                            row[f'Dist_Anchor_{anchor_id}'], 
-                            row[f'RSSI_{anchor_id}'], 
-                            alpha=0.3, color='blue', label='All Points' if 'All Points' not in plt.gca().get_legend_handles_labels()[1] else ""
+                            row[f'Dist_Anchor_{anchor_id}'],
+                            row[f'RSSI_{anchor_id}'],
+                            alpha=0.3, color='blue',
+                            label='All Points' if 'All Points' not in plt.gca().get_legend_handles_labels()[1] else ""
                         )
 
             # Plot mean RSSI values from results_df for the current PPE
             for _, row in anchor_data.iterrows():
                 plt.scatter(
-                    row['mean_distance'], 
-                    row['mean_rssi'], 
-                    alpha=1.0, color='red', edgecolor='black', s=100, label='Mean' if 'Mean' not in plt.gca().get_legend_handles_labels()[1] else ""
+                    row['mean_distance'],
+                    row['mean_rssi'],
+                    alpha=1.0, color='red', edgecolor='black', s=100,
+                    label='Mean' if 'Mean' not in plt.gca().get_legend_handles_labels()[1] else ""
                 )
 
-            plt.title(f'RSSI vs Distance - Anchor {anchor_id} - PPE: {ppe_id}')
-            plt.xlabel('Distance to Anchor (meters)')
-            plt.ylabel('RSSI (dBm)')
-            plt.legend(title='Legend')
-            plt.grid(True)
+            plt.xlabel('Distance to Anchor (meters)', fontsize=16)
+            plt.ylabel('RSSI (dBm)', fontsize=16)
+            plt.legend(fontsize=14)
+            ax = plt.gca()
+            ax.tick_params(axis='x', labelsize=16)
+            ax.tick_params(axis='y', labelsize=16)
             plt.tight_layout()
-            plt.show()
+            # Save only for anchors 1 and 4, with PPE in filename
+            plt.grid(True)
+            #plt.savefig(f'/home/andrey/Desktop/clb_1t_rssi_a{anchor_id}_v2.eps', format='eps', dpi=50)
+            plt.close()
 
 # Check if the scenario is valid
 if cenario not in cenario_to_folder:

@@ -14,7 +14,7 @@ from scipy.spatial import cKDTree
 base_path = '0. Dataset com Mascara Virtual'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'static'  # Cenário a ser analisado
+cenario = 'calibration'  # Cenário a ser analisado
 
 # Total esperado de pacotes
 total_esperado = 181
@@ -34,8 +34,8 @@ plotar_graficos = {
     "nao_processados_e_recebidos": False,
     "heatmap_nao_processados": False,
     "heatmap_nao_recebidos": False,
-    "grafico_espacial_nao_processados": True,
-    "grafico_espacial_nao_recebidos": False
+    "grafico_espacial_nao_processados": False,
+    "grafico_espacial_nao_recebidos": True
 }
 
 
@@ -270,8 +270,9 @@ def gerar_graficos(results_df, tipo='nao_processados'):
         plt.ylabel('Loss Percentage (%)')
         plt.show()
 
-def plot_heatmap_ancora(results_df, data_path, tipo='nao_processados', ppe_id=None, radius=0.85, grid_res=200):
+def plot_heatmap_ancora(results_df, data_path, tipo='nao_processados', ppe_id=None, radius=0.85, grid_res=150):
     anchors = list(anchor_coords.keys())
+    tipo = 'nao_recebidos'
     for anchor in anchors:
         fig, ax = plt.subplots(figsize=(12, 10))
         coords = anchor_coords[anchor]
@@ -325,14 +326,25 @@ def plot_heatmap_ancora(results_df, data_path, tipo='nao_processados', ppe_id=No
         ax.scatter(xs, ys, c=losses, cmap='coolwarm', edgecolor='k', s=60, vmin=0, vmax=50)
         ax.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor}')
         ax.text(coords['x'], coords['y'] + 0.3, f'A{anchor}', fontsize=10, color='red', ha='center')
-        ax.set_title(f"Heatmap Anchor A{anchor}")
-        ax.set_xlabel("X-axis (meters)")
-        ax.set_ylabel("Y-axis (meters)")
-        fig.colorbar(pcm, ax=ax, orientation='vertical', fraction=0.02, label='Loss Percentage (%)')
+        #ax.set_title(f"Heatmap Anchor A{anchor}")
+        ax.set_xlabel("X-axis (meters)", fontsize=16)
+        ax.set_ylabel("Y-axis (meters)", fontsize=16)
+        # Ajustar a barra de cor para ocupar toda a altura do eixo e aumentar o tamanho da fonte e escala
+        # Ajustar a altura do colorbar usando shrink e corrigir a formatação dos ticks
+        cbar = fig.colorbar(pcm, ax=ax, orientation='vertical', pad=0.02, aspect=30, shrink=0.75)
+        cbar.set_label('Azimuth Error (Degrees)', fontsize=16)
+        cbar.ax.tick_params(labelsize=14)
+        # Remover notação científica e garantir escala correta
+        cbar.ax.yaxis.offsetText.set_visible(False)
+        cbar.formatter.set_useOffset(False)
+        cbar.formatter.set_scientific(False)
+        cbar.update_ticks()
         plt.tight_layout()
-        if ppe_id:
-            plt.suptitle(f'Heatmap Spatial por Âncora - PPE_ID: {ppe_id}', fontsize=16)
-        plt.show()
+        ax = plt.gca()
+        ax.tick_params(axis='x', labelsize=16)
+        ax.tick_params(axis='y', labelsize=16)
+        #plt.suptitle(f'Heatmap Espacial por Âncora - PPE_ID: {ppe_id}', fontsize=16)
+        plt.savefig(f'/home/andrey/Desktop/heatmap_LP_0{anchor}_v2.eps', format='eps', dpi=20)
 
 # Função para gerar gráficos espaciais com base no controle por_ppe_id
 def gerar_grafico_espacial(results_df, data_path, tipo='nao_processados'):
@@ -494,14 +506,16 @@ if plotar_graficos["nao_processados_e_recebidos"]:
         ax.bar(loss_data_nao_recebidos.index + 0.2, loss_data_nao_recebidos, width=0.4, label='Not Received', color='orange')
 
         # Configurações do gráfico
-        ax.set_xlabel('Anchor')
-        ax.set_ylabel('Loss Percentage (%)')
-        ax.set_title(f'Packet Loss per Anchor (Not Processed & Not Received) - PPE_ID: {ppe_id}')
+        ax.set_xlabel('Anchor', fontsize=16)
+        ax.set_ylabel('Loss Percentage (%)', fontsize=16)
+        #ax.set_title(f'Packet Loss per Anchor (Not Processed & Not Received) - PPE_ID: {ppe_id}')
         ax.set_xticks(loss_data_nao_processados.index)
-        ax.legend()
-
-        # Ajustar layout
+        ax.legend(fontsize=14)
+        ax.tick_params(axis='x', labelsize=16)  # Increase fontsize of x-axis anchor numbers
+        ax.tick_params(axis='y', labelsize=16)  # Increase fontsize of y-axis labels
+         # Ajustar layout
         plt.tight_layout()
+        plt.savefig('/home/andrey/Desktop/stc_4t_cap_media_barra_v2.eps', format='eps', dpi=50)
         plt.show()
 
 '''Heatmap de Perda de Pacotes'''

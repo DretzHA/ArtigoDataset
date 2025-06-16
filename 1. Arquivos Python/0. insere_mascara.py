@@ -98,7 +98,7 @@ azimuth_ranges_rad = {
 
 def plot_anchors_with_ranges(anchor_coords, azimuth_ranges_deg, img_path):
     img = mpimg.imread(img_path)
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(8, 6))
     ax.imshow(img, extent=[0, -10.70, 8.8, 0])
 
     for anchor_id, coords in anchor_coords.items():
@@ -112,14 +112,14 @@ def plot_anchors_with_ranges(anchor_coords, azimuth_ranges_deg, img_path):
         if anchor_id == 6:
             # Plotar duas regiões: de -180 até -90 e de 90 até 180 (|ângulo| > 90)
             wedge1 = Wedge(
-                (x, y), 2.5,
+                (x, y), 3,
                 -180, -70,
-                facecolor='orange', alpha=0.2, edgecolor='orange'
+                facecolor='none', alpha=0.8, edgecolor='orange', linewidth=2
             )
             wedge2 = Wedge(
-                (x, y), 2.5,
+                (x, y), 3,
                 70, 180,
-                facecolor='orange', alpha=0.2, edgecolor='orange'
+                facecolor='none', alpha=0.8, edgecolor='orange', linewidth=2
             )
             ax.add_patch(wedge1)
             ax.add_patch(wedge2)
@@ -138,18 +138,18 @@ def plot_anchors_with_ranges(anchor_coords, azimuth_ranges_deg, img_path):
             continue  # Não plota range para outras âncoras
 
         wedge = Wedge(
-            (x, y), 2.5,
+            (x, y), 3,
             theta1, theta2,
-            facecolor='orange', alpha=0.2, edgecolor='orange'
+            facecolor='none', alpha=0.8, edgecolor='orange', linewidth=2
         )
         ax.add_patch(wedge)
 
     ax.set_xlim((0, -10.70))
     ax.set_ylim(8.8, 0)
-    ax.set_xlabel("X (m)")
-    ax.set_ylabel("Y (m)")
-    plt.title("Direction Ranges")
+    ax.set_xlabel("X (m)", fontsize=12)
+    ax.set_ylabel("Y (m)", fontsize=12)
     plt.tight_layout()
+    plt.savefig('/home/andrey/Desktop/azimuth_range_v2.eps', format='eps', dpi=50)
     plt.show()
 
 # Exemplo de uso:
