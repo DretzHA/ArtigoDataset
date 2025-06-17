@@ -12,6 +12,7 @@ from scipy.spatial import cKDTree
 # Caminho base para os datasets
 # base_path = '0. Dataset Original'
 base_path = '0. Dataset com Mascara Virtual'
+#base_path = '0. Dataset Teste'
 
 # Escolher Cenário - calibration | static | mobility
 cenario = 'mobility'  # Cenário a ser analisado
@@ -33,7 +34,7 @@ considerar_arquivos = {
 plotar_graficos = {
     "erro_direcao_por_ancora": False,
     "heatmap_erro_direcao": False,
-    "grafico_espacial_erro_direcao": True
+    "grafico_espacial_erro_direcao": False
 }
 
 # Caminho para a imagem de fundo
@@ -421,7 +422,7 @@ def plot_heatmap_ancora(results_df, data_path, radius=0.85, grid_res=120):
             ax.tick_params(axis='y', labelsize=16)
             #plt.suptitle(f'Heatmap Espacial por Âncora - PPE_ID: {ppe_id}', fontsize=16)
             #plt.savefig(f'/home/andrey/Desktop/heatmap_az_0{anchor}_ort_{ppe_id}_v2.eps', format='eps', dpi=20)
-            #plt.show()
+            plt.show()
 
 
 # Função para gerar gráfico espacial do erro médio 4 ângulo azimute
@@ -669,7 +670,7 @@ if plotar_graficos["grafico_espacial_erro_direcao"]:
                     #     if k ==53 or k == 61:
                     #         plt.savefig(f'/home/andrey/Desktop/lines_4t_{k}_v2.eps', format='eps', dpi=20)
                     # #Exibir cada figura gerada
-                    # #plt.show()
+                    plt.show()
                     # plt.close(fig)
 
                 #     # Salvar o frame na lista
