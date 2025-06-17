@@ -14,19 +14,19 @@ from scipy.spatial import cKDTree
 base_path = '0. Dataset com Mascara Virtual'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'static'  # Cenário a ser analisado
+cenario = 'mobility'  # Cenário a ser analisado
 
 # Variável para definir se os gráficos e resultados serão feitos por cada tipo de ppe_id ou pela média
 por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela média
 
 # Variável para escolher se arquivos específicos serão considerados
 considerar_arquivos = {
-    "ORT": True,
+    "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
-    "4T": False,
+    "4T": True,
     "3T": False,
-    "OUTROS": True
+    "OUTROS": False
 }
 
 # Variáveis para definir quais gráficos serão plotados
@@ -528,9 +528,10 @@ if plotar_graficos["grafico_espacial_erro_direcao"]:
                 data_df = pd.read_csv(data_file_path)
                 data_df = normalizar_ppe_ids(data_df)
                 data_df = calcular_angulo_real(data_df, anchor_coords, file_name)
-                
+                k=0
                 # Iterar sobre cada linha do data_df para plotar as linhas de azimute real e medido
                 for _, data_row in data_df[data_df['ppeID'] == ppe_id].iterrows():
+                    k += 1
                     x_real, y_real = data_row['X_real'], data_row['Y_real']
 
                     fig, ax = plt.subplots(figsize=(10, 8))
@@ -550,7 +551,7 @@ if plotar_graficos["grafico_espacial_erro_direcao"]:
                             ax.plot(
                                 real_azimuth_x, real_azimuth_y, 
                                 color='blue', linestyle='--', linewidth=2, alpha=0.8, 
-                                label='Azimute Real' if anchor_id == 1 else ""
+                                label='Real Azimuth' if anchor_id == 1 else ""
                             )
 
 
@@ -624,7 +625,7 @@ if plotar_graficos["grafico_espacial_erro_direcao"]:
                                     ax.plot(
                                         measured_azimuth_x, measured_azimuth_y, 
                                         color='green', linestyle='-', linewidth=2, alpha=0.8, 
-                                        label='Azimute Medido' if anchor_id == 1 else ""
+                                        label='Measured Azimuth' if anchor_id == 1 else ""
                                     )
                                     # ax.plot(
                                     # real_measured_azimuth_x, real_measured_azimuth_y, 
@@ -645,17 +646,31 @@ if plotar_graficos["grafico_espacial_erro_direcao"]:
                                 ax.plot(
                                     measured_azimuth_x, measured_azimuth_y, 
                                     color='green', linestyle='-', linewidth=2, alpha=0.8, 
-                                    label='Azimute Medido' if anchor_id == 1 else ""
+                                    label='Measured Azimuth' if anchor_id == 1 else ""
                                 )
                 
                     # Configurar título e layout
-                    ax.set_title(f'Gráfico Espacial - PPE_ID: {ppe_id}, Arquivo: {file_name}, Posição: ({x_real:.2f}, {y_real:.2f})')
-                    ax.set_xlabel("X-axis (meters)")
-                    ax.set_ylabel("Y-axis (meters)")
+                    #ax.set_title(f'Gráfico Espacial - PPE_ID: {ppe_id}, Arquivo: {file_name}, Posição: ({x_real:.2f}, {y_real:.2f})')
+                    ax.set_xlabel("X-axis (meters)", fontsize=16)
+                    ax.set_ylabel("Y-axis (meters)", fontsize=16)
                     ax.set_xlim((0, -10.70))   
                     ax.set_ylim(8.8, 0)     
-                    plt.tight_layout()
-                    plt.show()
+                    ax.tick_params(axis='x', labelsize=16)
+                    ax.tick_params(axis='y', labelsize=16)
+                    handles, labels = ax.get_legend_handles_labels()
+                    # Filtrar apenas as legendas de 'Measured Azimuth' e 'Real Azimuth'
+                    legend_items = [(h, l) for h, l in zip(handles, labels) if l in ['Measured Azimuth', 'Real Azimuth']]
+                    # if legend_items:
+                    #     ax.legend(*zip(*legend_items), fontsize=14, loc='upper right')
+                    # plt.tight_layout()
+                    # print(file_name, k, ppe_id)
+                    # if file_name == 'MOV_MID_4T_V1_data.csv' and ppe_id == 'Capacete':
+                    #     #if k == 4 or k == 10 or k ==17 or k == 39 or k ==53 or k == 61:
+                    #     if k ==53 or k == 61:
+                    #         plt.savefig(f'/home/andrey/Desktop/lines_4t_{k}_v2.eps', format='eps', dpi=20)
+                    # #Exibir cada figura gerada
+                    # #plt.show()
+                    # plt.close(fig)
 
                 #     # Salvar o frame na lista
                 #     fig.canvas.draw()

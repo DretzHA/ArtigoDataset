@@ -12,25 +12,25 @@ import math
 base_path = '0. Dataset com Mascara Virtual'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'static'  # Cenário a ser analisado
+cenario = 'mobility'  # Cenário a ser analisado
 
 # Variável para definir se os gráficos e resultados serão feitos por cada tipo de ppe_id ou pela média
 por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela média
 
 # Variável para escolher se arquivos específicos serão considerados
 considerar_arquivos = {
-    "ORT": True,
+    "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
     "4T": False,
     "3T": False,
-    "OUTROS": False
+    "OUTROS": True
 }
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
-    "grafico_espacial_erro_distancia": False,
-    "grafico_barras_erro_medio": True  # Nova variável de controle
+    "grafico_espacial_erro_distancia": True,
+    "grafico_barras_erro_medio": False  # Nova variável de controle
 }
 
 # Caminho para a imagem de fundo
@@ -135,20 +135,24 @@ def calcular_erro_z(df, z_est_col, z_real_col):
 
 def plotar_espacial(df, x_est_col, y_est_col, x_real_col, y_real_col, ppe_col, titulo, img):
     """Plota gráfico espacial das posições reais e estimadas, com linhas conectando real e estimado."""
-    plt.figure(figsize=(8, 8))
+    plt.figure(figsize=(10, 8))
     plt.imshow(img, extent=[0, -10.70, 8.8, 0], aspect='auto', alpha=0.5)
     for ppe in df[ppe_col].unique():
         subdf = df[df[ppe_col] == ppe]
-        plt.scatter(subdf[x_real_col], subdf[y_real_col], label=f'Real {ppe}', marker='o', s=30)
-        plt.scatter(subdf[x_est_col], subdf[y_est_col], label=f'Estimada {ppe}', marker='x', s=30)
+        plt.scatter(subdf[x_real_col], subdf[y_real_col], label=f'Real Position', marker='o', s=30)
+        plt.scatter(subdf[x_est_col], subdf[y_est_col], label=f'Estimated Position', marker='x', s=30)
         # Adiciona linhas conectando cada ponto real ao estimado
         for _, row in subdf.iterrows():
             plt.plot([row[x_real_col], row[x_est_col]], [row[y_real_col], row[y_est_col]], color='gray', alpha=0.5, linewidth=1)
-    plt.xlabel('X (m)')
-    plt.ylabel('Y (m)')
-    plt.title(titulo)
-    plt.legend()
-    plt.grid(True)
+    plt.xlabel('X (m)', fontsize=14)
+    plt.ylabel('Y (m)', fontsize=14)
+    #plt.title(titulo)
+    plt.legend(fontsize=12, loc = 'upper right')
+    ax = plt.gca()
+    ax.tick_params(axis='x', labelsize=14)
+    ax.tick_params(axis='y', labelsize=14)
+    #plt.grid(True)
+    plt.savefig(f'/home/andrey/Desktop/mobility_1t_v2.eps', format='eps', dpi=20)
     plt.show()
 
 # --- Laço principal de processamento ---
