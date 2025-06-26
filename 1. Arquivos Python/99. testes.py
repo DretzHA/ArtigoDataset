@@ -6,49 +6,53 @@ import numpy as np
 
 #### teste para ver angulo real
 #Coordenadas das ancoras
-anchor_coords = {
-    1: {'x': -1.00, 'y': 7.83, 'z': 2.41},  # A01
-    2: {'x': -0.96, 'y': 1.22, 'z': 2.41},  # A02
-    3: {'x': -5.81, 'y': 7.85, 'z': 2.41},  # A03
-    4: {'x': -3.50, 'y': 4.60, 'z': 2.41},  # A04
-    5: {'x': -5.76, 'y': 4.64, 'z': 2.41},  # A05
-    6: {'x': -0.98, 'y': 4.54, 'z': 2.41},  # A06
-    7: {'x': -5.85, 'y': 1.21, 'z': 2.41},  # A07
-}
+# anchor_coords = {
+#     1: {'x': -1.00, 'y': 7.83, 'z': 2.41},  # A01
+#     2: {'x': -0.96, 'y': 1.22, 'z': 2.41},  # A02
+#     3: {'x': -5.81, 'y': 7.85, 'z': 2.41},  # A03
+#     4: {'x': -3.50, 'y': 4.60, 'z': 2.41},  # A04
+#     5: {'x': -5.76, 'y': 4.64, 'z': 2.41},  # A05
+#     6: {'x': -0.98, 'y': 4.54, 'z': 2.41},  # A06
+#     7: {'x': -5.85, 'y': 1.21, 'z': 2.41},  # A07
+# }
 
-test_coords = {
-    'C1P1': {'x': -1.14, 'y': 0.39, 'z': 1.61}, 
-    'C2P3': {'x': -3.54, 'y': 4.44, 'z': 1.61}, 
-    'C3P1': {'x': -1.14, 'y': 6.84, 'z': 1.61}, 
-    'C3P5': {'x': -5.94, 'y': 6.84, 'z': 1.61}, 
-    'A02': {'x': -0.96, 'y': 1.22, 'z': 1.61}, 
-    'A05': {'x': -5.76, 'y': 4.64, 'z': 1.61}, 
+# test_coords = {
+#     'C1P1': {'x': -1.14, 'y': 0.39, 'z': 1.61}, 
+#     'C2P3': {'x': -3.54, 'y': 4.44, 'z': 1.61}, 
+#     'C3P1': {'x': -1.14, 'y': 6.84, 'z': 1.61}, 
+#     'C3P5': {'x': -5.94, 'y': 6.84, 'z': 1.61}, 
+#     'A02': {'x': -0.96, 'y': 1.22, 'z': 1.61}, 
+#     'A05': {'x': -5.76, 'y': 4.64, 'z': 1.61}, 
     
-}
+# }
 
 
-for test_id, tcoords in test_coords.items(): 
-    for anchor_id, acoords in anchor_coords.items():
-        xa = acoords['x']
-        ya = acoords['y']
-        za = acoords['z']
-        xr = tcoords['x']
-        yr = tcoords['y']
-        zr = tcoords['z']
+# for test_id, tcoords in test_coords.items(): 
+#     for anchor_id, acoords in anchor_coords.items():
+#         xa = acoords['x']
+#         ya = acoords['y']
+#         za = acoords['z']
+#         xr = tcoords['x']
+#         yr = tcoords['y']
+#         zr = tcoords['z']
 
 
-        dy = yr - ya
-        dx = xr - xa
-        dz = zr - za
+#         dy = yr - ya
+#         dx = xr - xa
+#         dz = zr - za
 
-        dist = np.sqrt(dx**2 + dy**2 + dz**2)
+#         dist = np.sqrt(dx**2 + dy**2 + dz**2)
 
-        real_angle = abs(np.arcsin(dz / dist))
-        print(f'Anchor: {anchor_id}, Teste Point: {test_id}, Angulo: {real_angle}, Distancia: {dist:.2f}')
-    print()
+#         real_angle = abs(np.arcsin(dz / dist))
+#         print(f'Anchor: {anchor_id}, Teste Point: {test_id}, Angulo: {real_angle}, Distancia: {dist:.2f}')
+#     print()
 
 
-
+# Leitura do arquivo, transformação em DataFrame e contagem dos valores da coluna Azim_1
+# file_path = '0. Dataset com Mascara Virtual/0. Calibration/Data IQ/CLB_A06_data.csv'
+# df = pd.read_csv(file_path)
+# quantidade_azim = df['Azim_7'].count()
+# print(f'Quantidade de valores na coluna: {quantidade_azim}')
 
 
 

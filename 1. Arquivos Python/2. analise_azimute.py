@@ -50,13 +50,13 @@ cenario_to_folder = {
 
 # Mapeamento das âncoras
 anchor_mapping = {
-    'ble-pd-0C4314F46CC2': 1,
-    'ble-pd-0C4314F46B3F': 2,
-    'ble-pd-0C4314F46B26': 3,
-    'ble-pd-0C4314F469CC': 4,
-    'ble-pd-C299A0EB1D6C': 5,
-    'ble-pd-639AA0EB1D6C': 6,
-    'ble-pd-D299A0EB1D6C': 7    
+        'ble-pd-0C4314F46CC2': 1,
+        'ble-pd-0C4314F46B3F': 2,
+        'ble-pd-0C4314F46B26': 3,
+        'ble-pd-0C4314F469CC': 4,
+        'ble-pd-C299A0EB1D6C': 5,
+        'ble-pd-639AA0EB1D6C': 6,
+        'ble-pd-D299A0EB1D6C': 7    
 }
 
 # Coordenadas das âncoras (valores padrão)

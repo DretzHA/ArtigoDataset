@@ -11,8 +11,8 @@ from scipy.spatial import cKDTree
 
 # Caminho base para os datasets
 # base_path = '0. Dataset Original'
-# base_path = '0. Dataset com Mascara Virtual'
-base_path = '0. Dataset Teste'
+base_path = '0. Dataset com Mascara Virtual'
+#base_path = '0. Dataset Teste'
 
 # Escolher Cenário - calibration | static | mobility
 cenario = 'calibration'  # Cenário a ser analisado
@@ -32,10 +32,10 @@ considerar_arquivos = {
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
-    "nao_processados_e_recebidos": False,
+    "nao_processados_e_recebidos": True,
     "heatmap_nao_processados": False,
     "heatmap_nao_recebidos": False,
-    "grafico_espacial_nao_processados": True,
+    "grafico_espacial_nao_processados": False,
     "grafico_espacial_nao_recebidos": False
 }
 
@@ -495,6 +495,7 @@ results_nao_recebidos_df = calcular_perda_nao_recebidos(cenario)
 # Gerar gráficos para perda de pacotes por âncora (Não Processados e Não Recebidos) no mesmo gráfico
 if plotar_graficos["nao_processados_e_recebidos"]:
     for ppe_id in results_nao_processados_df['ppe_id'].unique():
+        print(ppe_id)
         fig, ax = plt.subplots(figsize=(12, 6))
         ppe_results_nao_processados = results_nao_processados_df[results_nao_processados_df['ppe_id'] == ppe_id]
         ppe_results_nao_recebidos = results_nao_recebidos_df[results_nao_recebidos_df['ppe_id'] == ppe_id]
