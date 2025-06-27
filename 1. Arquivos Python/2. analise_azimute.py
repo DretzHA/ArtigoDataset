@@ -15,7 +15,7 @@ base_path = '0. Dataset com Mascara Virtual'
 #base_path = '0. Dataset Teste'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'mobility'  # Cenário a ser analisado
+cenario = 'static'  # Cenário a ser analisado
 
 # Variável para definir se os gráficos e resultados serão feitos por cada tipo de ppe_id ou pela média
 por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela média
@@ -25,16 +25,17 @@ considerar_arquivos = {
     "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
-    "4T": True,
+    "4T": False,
     "3T": False,
-    "OUTROS": False
+    "OUTROS": True
 }
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
     "erro_direcao_por_ancora": False,
     "heatmap_erro_direcao": False,
-    "grafico_espacial_erro_direcao": False
+    "grafico_espacial_erro_direcao": False,
+    "histograma_erro_azimute": True  # Adicionado controle para histograma
 }
 
 # Caminho para a imagem de fundo
@@ -478,7 +479,7 @@ def gerar_grafico_espacial_erro_direcao(results_df, data_path):
                     # Plotar a posição do teste
                     ax.scatter(x_real, y_real, color='blue', marker='o', s=50, alpha=0.6)
                     
-                    # Adicionar texto com o erro médio do ângulo azimute
+                    # Adicionar texto com o erro médio do azimute
                     ax.text(x_real, y_real - 0.2, f'{erro_direcao:.1f}°', fontsize=8, color='blue', ha='center')
                 
                 # Configurações do subplot
@@ -511,6 +512,7 @@ if plotar_graficos["erro_direcao_por_ancora"]:
 
 if plotar_graficos["heatmap_erro_direcao"]:
     gerar_heatmap(results_erro_direcao_df)
+
 
 # Gerar gráfico espacial do erro médio do ângulo azimute
 if plotar_graficos["grafico_espacial_erro_direcao"]:
@@ -690,3 +692,21 @@ if plotar_graficos["grafico_espacial_erro_direcao"]:
                 #     duration=500, 
                 #     loop=0
                 # )
+def plotar_histogramas_erro_azimute(results_df):
+    """
+    Plota histogramas do erro do azimute para cada ancora.
+    """
+    for anchor in sorted(results_df['anchor'].unique()):
+        plt.figure(figsize=(8, 5))
+        dados = results_df[results_df['anchor'] == anchor]['erro_direcao'].dropna()
+        plt.hist(dados, bins=200, color='orchid', edgecolor='black', alpha=0.8)
+        plt.title(f'Histogram of Azimuth Error - Anchor {anchor}')
+        plt.xlabel('Azimuth Error (degrees)')
+        plt.ylabel('Count')
+        plt.grid(True, linestyle='--', alpha=0.5)
+        plt.tight_layout()
+        plt.show()
+
+# Gerar histograma do erro do azimute por ancora
+if plotar_graficos.get("histograma_erro_azimute", False):
+    plotar_histogramas_erro_azimute(results_erro_direcao_df)

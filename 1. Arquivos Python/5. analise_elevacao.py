@@ -22,9 +22,9 @@ considerar_arquivos = {
     "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
-    "4T": True,
+    "4T": False,
     "3T": False,
-    "OUTROS": False
+    "OUTROS": True
 }
 
 # Variáveis para definir quais gráficos serão plotados
@@ -32,7 +32,8 @@ plotar_graficos = {
     "erro_direcao_por_ancora": True,
     "erro_direcao_por_arquivo": True,
     "heatmap_erro_direcao": True,
-    "grafico_espacial_erro_direcao": True
+    "grafico_espacial_erro_direcao": True,
+    "histograma_erro_elevacao": True  # Adicionado controle para histograma
 }
 
 # Caminho para a imagem de fundo
@@ -232,3 +233,22 @@ def calcular_erro_direcao_por_cenario(cenario):
 
 results_erro_direcao_df = calcular_erro_direcao_por_cenario(cenario)
 print()
+
+def plotar_histogramas_erro_elevacao(results_df):
+    """
+    Plota histogramas do erro do azimute para cada ancora.
+    """
+    for anchor in sorted(results_df['anchor'].unique()):
+        plt.figure(figsize=(8, 5))
+        dados = results_df[results_df['anchor'] == anchor]['erro_elevacao'].dropna()
+        plt.hist(dados, bins=200, color='orchid', edgecolor='black', alpha=0.8)
+        plt.title(f'Histogram of Elevation Error - Anchor {anchor}')
+        plt.xlabel('Elevation Error (degrees)')
+        plt.ylabel('Count')
+        plt.grid(True, linestyle='--', alpha=0.5)
+        plt.tight_layout()
+        plt.show()
+
+# Gerar histograma do erro do azimute por ancora
+if plotar_graficos.get("histograma_erro_elevacao", False):
+    plotar_histogramas_erro_elevacao(results_erro_direcao_df)

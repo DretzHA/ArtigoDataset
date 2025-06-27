@@ -15,7 +15,7 @@ base_path = '0. Dataset com Mascara Virtual'
 #base_path = '0. Dataset Teste'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'calibration'  # Cenário a ser analisado
+cenario = 'static'  # Cenário a ser analisado
 
 # Total esperado de pacotes
 total_esperado = 181
@@ -32,11 +32,12 @@ considerar_arquivos = {
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
-    "nao_processados_e_recebidos": True,
+    "nao_processados_e_recebidos": False,
     "heatmap_nao_processados": False,
     "heatmap_nao_recebidos": False,
     "grafico_espacial_nao_processados": False,
-    "grafico_espacial_nao_recebidos": False
+    "grafico_espacial_nao_recebidos": False,
+    "histograma": True
 }
 
 
@@ -477,6 +478,29 @@ def gerar_grafico_espacial_mobility(data_path, results_df, tipo='nao_processados
             plt.tight_layout()
             plt.show()
 
+# Função para plotar histogramas dos resultados de perda para cada ancora
+def plotar_histogramas_por_ancora(results_df, tipo='nao_processados'):
+    """
+    Plota histogramas dos resultados de perda para cada ancora.
+    tipo: 'nao_processados' ou 'nao_recebidos'
+    """
+    if tipo == 'nao_processados':
+        col = 'nao_processados_loss_percentage'
+        titulo_tipo = 'Not Processed'
+    else:
+        col = 'nao_recebidos_loss_percentage'
+        titulo_tipo = 'Not Received'
+    for anchor in sorted(results_df['anchor'].unique()):
+        plt.figure(figsize=(8, 5))
+        dados = results_df[results_df['anchor'] == anchor][col].dropna()
+        plt.hist(dados, bins=15, color='skyblue', edgecolor='black', alpha=0.8)
+        plt.title(f'Histogram of Packet Loss ({titulo_tipo}) - Anchor {anchor}')
+        plt.xlabel('Loss Percentage (%)')
+        plt.ylabel('Count')
+        plt.grid(True, linestyle='--', alpha=0.5)
+        plt.tight_layout()
+        plt.show()
+
 # Verificar se o cenário é válido
 if cenario not in cenario_to_folder:
     raise ValueError(f"Cenário inválido: {cenario}. Escolha entre: {', '.join(cenario_to_folder.keys())}")
@@ -574,4 +598,9 @@ if plotar_graficos["grafico_espacial_nao_recebidos"] and cenario in ['calibratio
 # Gráfico espacial para Não Processados no cenário de mobilidade
 if plotar_graficos["grafico_espacial_nao_processados"] and cenario == 'mobility':
     gerar_grafico_espacial_mobility(data_path, results_nao_processados_df, tipo='nao_processados')
+
+# Plotar histogramas dos resultados "não processados" e "não recebidos" para cada âncora
+if plotar_graficos["histograma"]:
+    plotar_histogramas_por_ancora(results_nao_processados_df, tipo='nao_processados')
+    plotar_histogramas_por_ancora(results_nao_recebidos_df, tipo='nao_recebidos')
 
