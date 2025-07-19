@@ -15,7 +15,7 @@ base_path = '0. Dataset com Mascara Virtual'
 #base_path = '0. Dataset Teste'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'static'  # Cenário a ser analisado
+cenario = 'mobility'  # Cenário a ser analisado
 
 # Variável para definir se os gráficos e resultados serão feitos por cada tipo de ppe_id ou pela média
 por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela média
@@ -35,7 +35,7 @@ plotar_graficos = {
     "erro_direcao_por_ancora": False,
     "heatmap_erro_direcao": False,
     "grafico_espacial_erro_direcao": False,
-    "histograma_erro_azimute": True  # Adicionado controle para histograma
+    "histograma_erro_azimute": False  # Adicionado controle para histograma
 }
 
 # Caminho para a imagem de fundo
@@ -159,7 +159,6 @@ def calcular_angulo_real(ppe_data, anchor_coords, file_name):
                             real_angle = -math.atan2(dy, dx)
                         else:
                             real_angle = math.atan2(dy, dx)
-                    
             else:
                 # Default formula
                 real_angle = np.arctan2(coords['y'] - y_real, x_real - coords['x'])
@@ -283,11 +282,11 @@ def calcular_erro_direcao_por_cenario(cenario):
 
             # Salvar todos os erros de ângulo azimute
             for _, row in ppe_data.iterrows():
+                x_real = row['X_real']
+                y_real = row['Y_real']
                 for anchor, anchor_id in anchor_mapping.items():
                     if cenario in ['static', 'calibration']:
                         if 'X_real' in ppe_data.columns and 'Y_real' in ppe_data.columns:
-                            x_real = ppe_data['X_real'].iloc[0]
-                            y_real = ppe_data['Y_real'].iloc[0]
                             anchor_x = anchor_coords[anchor_id]['x']
                             anchor_y = anchor_coords[anchor_id]['y']
                             distancia = ((x_real - anchor_x) ** 2 + (y_real - anchor_y) ** 2) ** 0.5
@@ -300,6 +299,8 @@ def calcular_erro_direcao_por_cenario(cenario):
                                 'ppe_id': ppe_id,
                                 'anchor': anchor,
                                 'erro_direcao': row[f'Erro_Dir_{anchor_id}'],
+                                'x_real': x_real,
+                                'y_real': y_real
                             })
                     else: #mobility
                         results.append({
@@ -307,11 +308,11 @@ def calcular_erro_direcao_por_cenario(cenario):
                                 'ppe_id': ppe_id,
                                 'anchor': anchor,
                                 'erro_direcao': row[f'Erro_Dir_{anchor_id}'],
+                                'x_real': x_real,
+                                'y_real': y_real
                             })
-                        
     results_df = pd.DataFrame(results)
     results_df['anchor'] = results_df['anchor'].map(anchor_mapping)
-
     return results_df
 
 # Função para gerar gráficos com base no controle por_ppe_id
@@ -710,3 +711,95 @@ def plotar_histogramas_erro_azimute(results_df):
 # Gerar histograma do erro do azimute por ancora
 if plotar_graficos.get("histograma_erro_azimute", False):
     plotar_histogramas_erro_azimute(results_erro_direcao_df)
+
+def filtrar_resultados_por_pontos(results_df, pontos_alvo):
+    """
+    Filtra os resultados para considerar apenas os pontos mais próximos das coordenadas fornecidas,
+    separando também por ancora.
+    pontos_alvo: lista de dicionários [{'x': float, 'y': float}, ...]
+    Retorna um DataFrame apenas com os pontos mais próximos de cada coordenada alvo e ancora.
+    """
+    selecionados = []
+    # Para cada combinação de file_name, ppe_id e anchor, buscar o ponto mais próximo de cada ponto alvo
+    for file_name in results_df['file_name'].unique():
+        df_file = results_df[results_df['file_name'] == file_name]
+        for ppe_id in df_file['ppe_id'].unique():
+            df_ppe = df_file[df_file['ppe_id'] == ppe_id]
+            for anchor in df_ppe['anchor'].unique():
+                df_anchor = df_ppe[df_ppe['anchor'] == anchor]
+                for ponto in pontos_alvo:
+                    menor_dist = float('inf')
+                    info_mais_proxima = None
+                    for idx, row in df_anchor.iterrows():
+                        x_real = row['x_real']
+                        y_real = row['y_real']
+                        dist = np.sqrt((x_real - ponto['x'])**2 + (y_real - ponto['y'])**2)
+                        if dist < menor_dist:
+                            menor_dist = dist
+                            info_mais_proxima = row.to_dict()
+                            info_mais_proxima['dist'] = dist
+                            info_mais_proxima['ponto_alvo_x'] = ponto['x']
+                            info_mais_proxima['ponto_alvo_y'] = ponto['y']
+                    if info_mais_proxima is not None:
+                        selecionados.append(info_mais_proxima)
+    return pd.DataFrame(selecionados)
+
+# Exemplo de uso:
+pontos_alvo = [
+    {'x': -1.14, 'y': 0.39},  # C1P1
+    {'x': -2.34, 'y': 0.39},  # C1P2
+    {'x': -3.54, 'y': 0.39},  # C1P3
+    {'x': -4.74, 'y': 0.39},  # C1P4
+    {'x': -5.94, 'y': 0.39},  # C1P5
+    {'x': -7.14, 'y': 0.84},  # C4P1
+    {'x': -7.14, 'y': 2.04},  # C4P2
+    {'x': -7.14, 'y': 3.24},  # C4P3
+    {'x': -7.14, 'y': 4.44},  # C4P4
+    {'x': -5.94, 'y': 4.44},  # C2P5
+    {'x': -4.74, 'y': 4.44},  # C2P4
+    {'x': -3.54, 'y': 4.44},  # C2P3
+    {'x': -2.34, 'y': 4.44},  # C2P2
+    {'x': -1.14, 'y': 4.44},  # C2P1
+    {'x': -2.34, 'y': 4.44},  # C2P2 (duplicado)
+    {'x': -3.54, 'y': 4.44},  # C2P3 (duplicado)
+    {'x': -4.74, 'y': 4.44},  # C2P4 (duplicado)
+    {'x': -5.94, 'y': 4.44},  # C2P5 (duplicado)
+    {'x': -7.14, 'y': 4.44},  # C4P4 (duplicado)
+    {'x': -7.14, 'y': 5.64},  # C4P5
+    {'x': -7.14, 'y': 6.84},  # C4P6
+    {'x': -5.94, 'y': 6.84},  # C3P5
+    {'x': -4.74, 'y': 6.84},  # C3P4
+    {'x': -3.54, 'y': 6.84},  # C3P3
+    {'x': -2.34, 'y': 6.84},  # C3P2
+    {'x': -1.14, 'y': 6.84},  # C3P1
+]
+
+df_filtrado = filtrar_resultados_por_pontos(results_erro_direcao_df, pontos_alvo)
+def comparar_erro_medio(df_erro_direcao, df_filtrado):
+    """
+    Compara o erro_direcao médio entre df_erro_direcao e df_filtrado por anchor, file_name e ppe_id.
+    Retorna a média geral da diferença dos erros.
+    """
+    # Agrupar e calcular a média do erro_direcao para cada combinação
+    media_erro_geral = df_erro_direcao.groupby(['anchor', 'file_name', 'ppe_id'])['erro_direcao'].mean().reset_index()
+    media_erro_filtrado = df_filtrado.groupby(['anchor', 'file_name', 'ppe_id'])['erro_direcao'].mean().reset_index()
+
+    # Mesclar os dois DataFrames pelas chaves
+    comparacao = pd.merge(
+        media_erro_geral, media_erro_filtrado,
+        on=['anchor', 'file_name', 'ppe_id'],
+        suffixes=('_geral', '_filtrado')
+    )
+
+    # Calcular a diferença
+    comparacao['diferenca'] = comparacao['erro_direcao_geral'] - comparacao['erro_direcao_filtrado']
+
+    # Retornar a média geral da diferença
+    media_diferenca = comparacao['diferenca'].mean()
+    print(f'Média geral da diferença dos erros: {media_diferenca:.4f}')
+    return media_diferenca
+
+# Exemplo de uso:
+comparar_erro_medio(results_erro_direcao_df, df_filtrado)
+
+# Agora você pode usar df_filtrado para análises ou gráficos específicos.

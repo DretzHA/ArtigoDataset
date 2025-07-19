@@ -29,7 +29,7 @@ considerar_arquivos = {
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
-    "grafico_espacial_erro_distancia": True,
+    "grafico_espacial_erro_distancia": False,
     "grafico_barras_erro_medio": False  # Nova variável de controle
 }
 
@@ -162,6 +162,7 @@ data_files = [f for f in os.listdir(data_path) if f.endswith('.csv')]
 data_files = filtrar_arquivos(data_files)
 
 resultados = []
+resultados_linha = []  # Novo: resultados por linha para comparação detalhada
 
 for file in data_files:
     file_path = os.path.join(data_path, file)
@@ -184,11 +185,30 @@ for file in data_files:
     ppe_col = 'ppeID' if 'ppeID' in df.columns else 'ppe_id'
     df = calcular_erro_2d(df, x_est_col, y_est_col, x_real_col, y_real_col)
     df = calcular_erro_z(df, z_est_col, z_real_col)
-    # Calcular erro médio por ppeID
+    # Salvar resultados por linha para comparação detalhada
+    for _, row in df.iterrows():
+        resultados_linha.append({
+            'arquivo': file,
+            'ppeID': row[ppe_col],
+            'x_real': row[x_real_col],
+            'y_real': row[y_real_col],
+            'erro_2d': row['erro_2d'],
+            'erro_z': row['erro_z']
+        })
+    # Calcular erro médio por ppeID (mantém para outros usos)
     for ppe, subdf in df.groupby(ppe_col):
         erro_medio_2d = subdf['erro_2d'].mean()
         erro_medio_z = subdf['erro_z'].mean()
-        resultados.append({'arquivo': file, 'ppeID': ppe, 'erro_medio_2d': erro_medio_2d, 'erro_medio_z': erro_medio_z})
+        x_real_mean = subdf[x_real_col].mean()
+        y_real_mean = subdf[y_real_col].mean()
+        resultados.append({
+            'arquivo': file,
+            'ppeID': ppe,
+            'erro_medio_2d': erro_medio_2d,
+            'erro_medio_z': erro_medio_z,
+            'x_real': x_real_mean,
+            'y_real': y_real_mean
+        })
         # Plotar gráfico espacial se habilitado
         if plotar_graficos["grafico_espacial_erro_distancia"]:
             plotar_espacial(subdf, x_est_col, y_est_col, x_real_col, y_real_col, ppe_col,
@@ -218,3 +238,82 @@ if plotar_graficos.get("grafico_barras_erro_medio", False):
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
  #   plt.show()
+
+def filtrar_resultados_por_pontos(results_df, pontos_alvo):
+    """
+    Filtra os resultados para considerar apenas os pontos mais próximos das coordenadas fornecidas.
+    pontos_alvo: lista de dicionários [{'x': float, 'y': float}, ...]
+    Retorna um DataFrame apenas com os pontos mais próximos de cada coordenada alvo.
+    """
+    selecionados = []
+    for ponto in pontos_alvo:
+        menor_dist = float('inf')
+        info_mais_proxima = None
+        for idx, row in results_df.iterrows():
+            x_real = row['x_real']
+            y_real = row['y_real']
+            dist = np.sqrt((x_real - ponto['x'])**2 + (y_real - ponto['y'])**2)
+            if dist < menor_dist:
+                menor_dist = dist
+                info_mais_proxima = row.copy()
+                info_mais_proxima['dist'] = dist
+                info_mais_proxima['ponto_alvo_x'] = ponto['x']
+                info_mais_proxima['ponto_alvo_y'] = ponto['y']
+        if info_mais_proxima is not None:
+            selecionados.append(info_mais_proxima)
+    return pd.DataFrame(selecionados)
+
+# Exemplo de uso:
+pontos_alvo = [
+    {'x': -1.14, 'y': 0.39},  # C1P1
+    {'x': -2.34, 'y': 0.39},  # C1P2
+    {'x': -3.54, 'y': 0.39},  # C1P3
+    {'x': -4.74, 'y': 0.39},  # C1P4
+    {'x': -5.94, 'y': 0.39},  # C1P5
+    {'x': -7.14, 'y': 0.84},  # C4P1
+    {'x': -7.14, 'y': 2.04},  # C4P2
+    {'x': -7.14, 'y': 3.24},  # C4P3
+    {'x': -7.14, 'y': 4.44},  # C4P4
+    {'x': -5.94, 'y': 4.44},  # C2P5
+    {'x': -4.74, 'y': 4.44},  # C2P4
+    {'x': -3.54, 'y': 4.44},  # C2P3
+    {'x': -2.34, 'y': 4.44},  # C2P2
+    {'x': -1.14, 'y': 4.44},  # C2P1
+    {'x': -2.34, 'y': 4.44},  # C2P2 (duplicado)
+    {'x': -3.54, 'y': 4.44},  # C2P3 (duplicado)
+    {'x': -4.74, 'y': 4.44},  # C2P4 (duplicado)
+    {'x': -5.94, 'y': 4.44},  # C2P5 (duplicado)
+    {'x': -7.14, 'y': 4.44},  # C4P4 (duplicado)
+    {'x': -7.14, 'y': 5.64},  # C4P5
+    {'x': -7.14, 'y': 6.84},  # C4P6
+    {'x': -5.94, 'y': 6.84},  # C3P5
+    {'x': -4.74, 'y': 6.84},  # C3P4
+    {'x': -3.54, 'y': 6.84},  # C3P3
+    {'x': -2.34, 'y': 6.84},  # C3P2
+    {'x': -1.14, 'y': 6.84},  # C3P1
+]
+
+resultados_linha_df = pd.DataFrame(resultados_linha)
+df_filtrado = filtrar_resultados_por_pontos(resultados_linha_df, pontos_alvo)
+
+def comparar_erro_medio(df_erro, df_filtrado):
+    """
+    Compara o erro_2d médio entre df_erro e df_filtrado por arquivo e ppeID.
+    Retorna a média geral da diferença dos erros.
+    """
+    media_erro_geral = df_erro.groupby(['arquivo', 'ppeID'])['erro_2d'].mean().reset_index()
+    media_erro_filtrado = df_filtrado.groupby(['arquivo', 'ppeID'])['erro_2d'].mean().reset_index()
+
+    comparacao = pd.merge(
+        media_erro_geral, media_erro_filtrado,
+        on=['arquivo', 'ppeID'],
+        suffixes=('_geral', '_filtrado')
+    )
+
+    comparacao['diferenca'] = comparacao['erro_2d_geral'] - comparacao['erro_2d_filtrado']
+    media_diferenca = comparacao['diferenca'].mean()
+    print(f'Média geral da diferença dos erros 2D: {media_diferenca:.4f}')
+    return media_diferenca
+
+# Exemplo de uso:
+comparar_erro_medio(resultados_linha_df, df_filtrado)
