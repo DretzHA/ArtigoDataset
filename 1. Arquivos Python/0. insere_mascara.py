@@ -33,7 +33,7 @@ azimuth_ranges_deg = {
     "Azim_4": None,          # Special condition for Azim_4
     "Azim_5": None,          # Special condition for Azim_5
     "Azim_6": None,          # Special condition for Azim_6
-    "Azim_7": (20, 160)          # Range para ignorar ângulos entre 20 e 160 Azim_7
+    "Azim_7": None          # Range para ignorar ângulos entre 20 e 160 Azim_7
 }
 
 # Convert ranges to radians (skip Azim_6 since it has a special condition)
@@ -58,16 +58,12 @@ for filename in os.listdir(input_folder):
             df = pd.read_csv(input_path)
             # Apply the mask only to Azim_6: abs(angle) > 70
             if "Azim_6" in df.columns:
-                df["Azim_6"] = df["Azim_6"].apply(
-                    lambda x: x if abs(x) > math.radians(70) else np.nan
-                )
-                # Save the modified DataFrame to the output folder
-                df.to_csv(output_path, index=False)
-            if "Azim_7" in df.columns:
-                # Apply the mask to Azim_7: reject angles between 20 and 160
-                df["Azim_7"] = df["Azim_7"].apply(
-                    lambda x: x if not (math.radians(20) <= x <= math.radians(160)) else np.nan
-                )
+                mask = df["Azim_6"].apply(lambda x: not (abs(x) > math.radians(70)))
+                df.loc[mask, "Azim_6"] = np.nan
+                for col_prefix in ["RSSI_", "Elev_", "iq_q_", "iq_i_", "X_sylabs", "Y_sylabs", "Z_sylabs"]:
+                    col = f"{col_prefix}6"
+                    if col in df.columns:
+                        df.loc[mask, col] = np.nan
                 # Save the modified DataFrame to the output folder
                 df.to_csv(output_path, index=False)
             continue
@@ -79,33 +75,25 @@ for filename in os.listdir(input_folder):
         for i in range(1, 8):  # Columns Azim_1 to Azim_7
             column_name = f"Azim_{i}"
             if column_name in df.columns:
+                mask = None
                 if column_name == "Azim_2":
                     min_angle, max_angle = azimuth_ranges_rad[column_name]
                     # Special condition for Azim_2: reject angles between -75 and 90
-                    df[column_name] = df[column_name].apply(
-                        lambda x: x if not (math.radians(min_angle) <= x <= math.radians(max_angle)) else np.nan
-                    )
+                    mask = df[column_name].apply(lambda x: math.radians(min_angle) <= x <= math.radians(max_angle))
                 elif column_name == "Azim_6":
                     # Special condition for Azim_6: abs(angle) > 70
-                    df[column_name] = df[column_name].apply(
-                        lambda x: x if abs(x) > math.radians(70) else np.nan
-                    )
-                elif column_name == "Azim_7":
-                    # Special condition for Azim_7: abs(angle) > 70
-                    min_angle, max_angle = azimuth_ranges_rad[column_name]
-                    # Special condition for Azim_7: reject angles between 20 and 160
-                    df[column_name] = df[column_name].apply(
-                        lambda x: x if not (math.radians(min_angle) <= x <= math.radians(max_angle)) else np.nan
-                    )
+                    mask = df[column_name].apply(lambda x: not (abs(x) > math.radians(70)))
                 elif column_name in azimuth_ranges_rad:
-                    # Apply range-based mask for other azimuths with defined ranges
                     min_angle, max_angle = azimuth_ranges_rad[column_name]
-                    df[column_name] = df[column_name].apply(
-                        lambda x: x if min_angle <= x <= max_angle else np.nan
-                    )
-                else:
-                    # Skip filtering for Azim_4, Azim_5, and Azim_7
-                    continue
+                    mask = df[column_name].apply(lambda x: not (min_angle <= x <= max_angle))
+                # else: skip filtering for Azim_4, Azim_5, Azim_7
+
+                if mask is not None:
+                    df.loc[mask, column_name] = np.nan
+                    for col_prefix in ["RSSI_", "Elev_", "iq_q_", "iq_i_", "X_sylabs", "Y_sylabs", "Z_sylabs"]:
+                        col = f"{col_prefix}{i}"
+                        if col in df.columns:
+                            df.loc[mask, col] = np.nan
 
         # Save the modified DataFrame to the output folder
         df.to_csv(output_path, index=False)
@@ -186,4 +174,4 @@ def plot_anchors_with_ranges(anchor_coords, azimuth_ranges_deg, img_path):
     plt.show()
 
 # Exemplo de uso:
-plot_anchors_with_ranges(anchor_coords, azimuth_ranges_deg, img_path)
+#plot_anchors_with_ranges(anchor_coords, azimuth_ranges_deg, img_path)

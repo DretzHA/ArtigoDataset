@@ -10,9 +10,9 @@ from scipy.spatial import cKDTree
 '''Arquivo para processar e analisar a perda dos pacotes do Dataset'''
 
 # Caminho base para os datasets
-# base_path = '0. Dataset Original'
-base_path = '0. Dataset com Mascara Virtual'
-#base_path = '0. Dataset Teste'
+#base_path = '0. Dataset Original'
+#base_path = '0. Dataset com Mascara Virtual'
+base_path = '0. Dataset Teste'
 
 # Escolher Cenário - calibration | static | mobility
 cenario = 'static'  # Cenário a ser analisado
@@ -25,19 +25,19 @@ considerar_arquivos = {
     "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
-    "4T": False,
+    "4T": True,
     "3T": False,
-    "OUTROS": True
+    "OUTROS": False
 }
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
-    "nao_processados_e_recebidos": False,
+    "nao_processados_e_recebidos": True,
     "heatmap_nao_processados": False,
     "heatmap_nao_recebidos": False,
     "grafico_espacial_nao_processados": False,
     "grafico_espacial_nao_recebidos": False,
-    "histograma": True
+    "histograma": False
 }
 
 
@@ -512,9 +512,9 @@ data_path = os.path.join(cenario_path, 'Data IQ')
 
 # Calcular a perda de pacotes "Não Processados"
 results_nao_processados_df = calcular_perda_nao_processados(cenario)
-
 # Calcular a perda de pacotes "Não Recebidos"
 results_nao_recebidos_df = calcular_perda_nao_recebidos(cenario)
+
 
 # Gerar gráficos para perda de pacotes por âncora (Não Processados e Não Recebidos) no mesmo gráfico
 if plotar_graficos["nao_processados_e_recebidos"]:
@@ -526,24 +526,60 @@ if plotar_graficos["nao_processados_e_recebidos"]:
 
         # Gráfico de Não Processados
         loss_data_nao_processados = ppe_results_nao_processados.groupby('anchor')['nao_processados_loss_percentage'].mean()
-        ax.bar(loss_data_nao_processados.index - 0.2, loss_data_nao_processados, width=0.4, label='Not Processed', color='blue')
+        ax.bar(loss_data_nao_processados.index - 0.2, loss_data_nao_processados, width=0.4, label='UA', color='blue')
 
         # Gráfico de Não Recebidos
         loss_data_nao_recebidos = ppe_results_nao_recebidos.groupby('anchor')['nao_recebidos_loss_percentage'].mean()
-        ax.bar(loss_data_nao_recebidos.index + 0.2, loss_data_nao_recebidos, width=0.4, label='Not Received', color='orange')
+        ax.bar(loss_data_nao_recebidos.index + 0.2, loss_data_nao_recebidos, width=0.4, label='MP', color='orange')
 
         # Configurações do gráfico
-        ax.set_xlabel('Anchor', fontsize=16)
-        ax.set_ylabel('Loss Percentage (%)', fontsize=16)
+        ax.set_xlabel('Anchor', fontsize=18)
+        ax.set_ylabel('Loss Percentage (%)', fontsize=18)
         #ax.set_title(f'Packet Loss per Anchor (Not Processed & Not Received) - PPE_ID: {ppe_id}')
         ax.set_xticks(loss_data_nao_processados.index)
         ax.legend(fontsize=14)
-        ax.tick_params(axis='x', labelsize=16)  # Increase fontsize of x-axis anchor numbers
-        ax.tick_params(axis='y', labelsize=16)  # Increase fontsize of y-axis labels
+        ax.tick_params(axis='x', labelsize=18)  # Increase fontsize of x-axis anchor numbers
+        ax.tick_params(axis='y', labelsize=18)  # Increase fontsize of y-axis labels
          # Ajustar layout
         plt.tight_layout()
        # plt.savefig('/home/andrey/Desktop/stc_4t_cap_media_barra_v2.eps', format='eps', dpi=50)
+        plt.grid(alpha=0.5, linestyle='--')
+        ax.set_ylim(0, 35)
         plt.show()
+
+    # # Figura adicional: todos os resultados dos não processados de todas as âncoras
+    # # Figura adicional: todos os resultados dos não processados de todas as âncoras, cada barra com uma cor diferente
+    # fig, ax = plt.subplots(figsize=(12, 6))
+    # all_loss_nao_processados = results_nao_processados_df.groupby('anchor')['nao_processados_loss_percentage'].mean()
+    # colors = plt.cm.tab10.colors  # Paleta de cores
+    # bar_colors = [colors[i % len(colors)] for i in range(len(all_loss_nao_processados))]
+    # ax.bar(all_loss_nao_processados.index, all_loss_nao_processados, color=bar_colors, width=0.6)
+    # ax.set_xlabel('Anchor', fontsize=18)
+    # ax.set_ylabel('Loss Percentage (%)', fontsize=18)
+    # #ax.set_title('Packet Loss per Anchor (Not Processed) - All PPE_IDs', fontsize=18)
+    # ax.set_xticks(all_loss_nao_processados.index)
+    # ax.tick_params(axis='x', labelsize=18)
+    # ax.tick_params(axis='y', labelsize=18)
+    # plt.tight_layout()
+    # plt.grid(alpha=0.5, linestyle='--')
+    # ax.set_ylim(0, 35)
+    # plt.show()
+
+    # # Figura adicional: todos os resultados dos não recebidos de todas as âncoras, cada barra com uma cor diferente
+    # fig, ax = plt.subplots(figsize=(12, 6))
+    # all_loss_nao_recebidos = results_nao_recebidos_df.groupby('anchor')['nao_recebidos_loss_percentage'].mean()
+    # bar_colors = [colors[i % len(colors)] for i in range(len(all_loss_nao_recebidos))]
+    # ax.bar(all_loss_nao_recebidos.index, all_loss_nao_recebidos, color=bar_colors, width=0.6)
+    # ax.set_xlabel('Anchor', fontsize=18)
+    # ax.set_ylabel('Loss Percentage (%)', fontsize=18)
+    # #ax.set_title('Packet Loss per Anchor (Not Received) - All PPE_IDs', fontsize=18)
+    # ax.set_xticks(all_loss_nao_recebidos.index)
+    # ax.tick_params(axis='x', labelsize=18)
+    # ax.tick_params(axis='y', labelsize=18)
+    # plt.tight_layout()
+    # plt.grid(alpha=0.5, linestyle='--')
+    # ax.set_ylim(0, 35)
+    # plt.show()
 
 '''Heatmap de Perda de Pacotes'''
 # Criar uma tabela pivot para o heatmap de Não Processados (por arquivo de teste) para cada ppeID
