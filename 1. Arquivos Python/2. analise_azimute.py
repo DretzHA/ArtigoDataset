@@ -11,11 +11,11 @@ from scipy.spatial import cKDTree
 '''Arquivo para processar e analisar o erro do ângulo azimute'''
 # Caminho base para os datasets
 # base_path = '0. Dataset Original'
-base_path = '0. Dataset com Mascara Virtual'
-#base_path = '0. Dataset Teste'
+#base_path = '0. Dataset com Mascara Virtual'
+base_path = '0. Dataset Teste'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'mobility'  # Cenário a ser analisado
+cenario = 'calibration'  # Cenário a ser analisado
 
 # Variável para definir se os gráficos e resultados serão feitos por cada tipo de ppe_id ou pela média
 por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela média
@@ -327,7 +327,7 @@ def gerar_graficos(results_df):
         plt.xlabel('Anchor')
         plt.ylabel('Mean Direction Angle Error (degrees)')
         plt.xticks(rotation=45)
-        #plt.show()
+        plt.show()
 
 # Função para gerar heatmap do erro do ângulo azimute
 def gerar_heatmap(results_df):
@@ -406,13 +406,13 @@ def plot_heatmap_ancora(results_df, data_path, radius=0.85, grid_res=120):
             ax.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor}')
             ax.text(coords['x'], coords['y'] + 0.3, f'A{anchor}', fontsize=10, color='red', ha='center')
             #ax.set_title(f"Heatmap Anchor A{anchor} (Erro Azimute)")
-            ax.set_xlabel("X-axis (meters)", fontsize=16)
-            ax.set_ylabel("Y-axis (meters)", fontsize=16)
+            ax.set_xlabel("X-axis (meters)", fontsize=24)
+            ax.set_ylabel("Y-axis (meters)", fontsize=24)
             # Ajustar a barra de cor para ocupar toda a altura do eixo e aumentar o tamanho da fonte e escala
             # Ajustar a altura do colorbar usando shrink e corrigir a formatação dos ticks
             cbar = fig.colorbar(pcm, ax=ax, orientation='vertical', pad=0.02, aspect=30, shrink=0.75)
-            cbar.set_label('Azimuth Error (Degrees)', fontsize=16)
-            cbar.ax.tick_params(labelsize=14)
+            cbar.set_label('Azimuth Error (Degrees)', fontsize=24)
+            cbar.ax.tick_params(labelsize=24)
             # Remover notação científica e garantir escala correta
             cbar.ax.yaxis.offsetText.set_visible(False)
             cbar.formatter.set_useOffset(False)
@@ -420,8 +420,8 @@ def plot_heatmap_ancora(results_df, data_path, radius=0.85, grid_res=120):
             cbar.update_ticks()
             plt.tight_layout()
             ax = plt.gca()
-            ax.tick_params(axis='x', labelsize=16)
-            ax.tick_params(axis='y', labelsize=16)
+            ax.tick_params(axis='x', labelsize=24)
+            ax.tick_params(axis='y', labelsize=24)
             #plt.suptitle(f'Heatmap Espacial por Âncora - PPE_ID: {ppe_id}', fontsize=16)
             #plt.savefig(f'/home/andrey/Desktop/heatmap_az_0{anchor}_ort_{ppe_id}_v2.eps', format='eps', dpi=20)
             plt.show()
@@ -712,94 +712,94 @@ def plotar_histogramas_erro_azimute(results_df):
 if plotar_graficos.get("histograma_erro_azimute", False):
     plotar_histogramas_erro_azimute(results_erro_direcao_df)
 
-def filtrar_resultados_por_pontos(results_df, pontos_alvo):
-    """
-    Filtra os resultados para considerar apenas os pontos mais próximos das coordenadas fornecidas,
-    separando também por ancora.
-    pontos_alvo: lista de dicionários [{'x': float, 'y': float}, ...]
-    Retorna um DataFrame apenas com os pontos mais próximos de cada coordenada alvo e ancora.
-    """
-    selecionados = []
-    # Para cada combinação de file_name, ppe_id e anchor, buscar o ponto mais próximo de cada ponto alvo
-    for file_name in results_df['file_name'].unique():
-        df_file = results_df[results_df['file_name'] == file_name]
-        for ppe_id in df_file['ppe_id'].unique():
-            df_ppe = df_file[df_file['ppe_id'] == ppe_id]
-            for anchor in df_ppe['anchor'].unique():
-                df_anchor = df_ppe[df_ppe['anchor'] == anchor]
-                for ponto in pontos_alvo:
-                    menor_dist = float('inf')
-                    info_mais_proxima = None
-                    for idx, row in df_anchor.iterrows():
-                        x_real = row['x_real']
-                        y_real = row['y_real']
-                        dist = np.sqrt((x_real - ponto['x'])**2 + (y_real - ponto['y'])**2)
-                        if dist < menor_dist:
-                            menor_dist = dist
-                            info_mais_proxima = row.to_dict()
-                            info_mais_proxima['dist'] = dist
-                            info_mais_proxima['ponto_alvo_x'] = ponto['x']
-                            info_mais_proxima['ponto_alvo_y'] = ponto['y']
-                    if info_mais_proxima is not None:
-                        selecionados.append(info_mais_proxima)
-    return pd.DataFrame(selecionados)
+# def filtrar_resultados_por_pontos(results_df, pontos_alvo):
+#     """
+#     Filtra os resultados para considerar apenas os pontos mais próximos das coordenadas fornecidas,
+#     separando também por ancora.
+#     pontos_alvo: lista de dicionários [{'x': float, 'y': float}, ...]
+#     Retorna um DataFrame apenas com os pontos mais próximos de cada coordenada alvo e ancora.
+#     """
+#     selecionados = []
+#     # Para cada combinação de file_name, ppe_id e anchor, buscar o ponto mais próximo de cada ponto alvo
+#     for file_name in results_df['file_name'].unique():
+#         df_file = results_df[results_df['file_name'] == file_name]
+#         for ppe_id in df_file['ppe_id'].unique():
+#             df_ppe = df_file[df_file['ppe_id'] == ppe_id]
+#             for anchor in df_ppe['anchor'].unique():
+#                 df_anchor = df_ppe[df_ppe['anchor'] == anchor]
+#                 for ponto in pontos_alvo:
+#                     menor_dist = float('inf')
+#                     info_mais_proxima = None
+#                     for idx, row in df_anchor.iterrows():
+#                         x_real = row['x_real']
+#                         y_real = row['y_real']
+#                         dist = np.sqrt((x_real - ponto['x'])**2 + (y_real - ponto['y'])**2)
+#                         if dist < menor_dist:
+#                             menor_dist = dist
+#                             info_mais_proxima = row.to_dict()
+#                             info_mais_proxima['dist'] = dist
+#                             info_mais_proxima['ponto_alvo_x'] = ponto['x']
+#                             info_mais_proxima['ponto_alvo_y'] = ponto['y']
+#                     if info_mais_proxima is not None:
+#                         selecionados.append(info_mais_proxima)
+#     return pd.DataFrame(selecionados)
 
-# Exemplo de uso:
-pontos_alvo = [
-    {'x': -1.14, 'y': 0.39},  # C1P1
-    {'x': -2.34, 'y': 0.39},  # C1P2
-    {'x': -3.54, 'y': 0.39},  # C1P3
-    {'x': -4.74, 'y': 0.39},  # C1P4
-    {'x': -5.94, 'y': 0.39},  # C1P5
-    {'x': -7.14, 'y': 0.84},  # C4P1
-    {'x': -7.14, 'y': 2.04},  # C4P2
-    {'x': -7.14, 'y': 3.24},  # C4P3
-    {'x': -7.14, 'y': 4.44},  # C4P4
-    {'x': -5.94, 'y': 4.44},  # C2P5
-    {'x': -4.74, 'y': 4.44},  # C2P4
-    {'x': -3.54, 'y': 4.44},  # C2P3
-    {'x': -2.34, 'y': 4.44},  # C2P2
-    {'x': -1.14, 'y': 4.44},  # C2P1
-    {'x': -2.34, 'y': 4.44},  # C2P2 (duplicado)
-    {'x': -3.54, 'y': 4.44},  # C2P3 (duplicado)
-    {'x': -4.74, 'y': 4.44},  # C2P4 (duplicado)
-    {'x': -5.94, 'y': 4.44},  # C2P5 (duplicado)
-    {'x': -7.14, 'y': 4.44},  # C4P4 (duplicado)
-    {'x': -7.14, 'y': 5.64},  # C4P5
-    {'x': -7.14, 'y': 6.84},  # C4P6
-    {'x': -5.94, 'y': 6.84},  # C3P5
-    {'x': -4.74, 'y': 6.84},  # C3P4
-    {'x': -3.54, 'y': 6.84},  # C3P3
-    {'x': -2.34, 'y': 6.84},  # C3P2
-    {'x': -1.14, 'y': 6.84},  # C3P1
-]
+# # Exemplo de uso:
+# pontos_alvo = [
+#     {'x': -1.14, 'y': 0.39},  # C1P1
+#     {'x': -2.34, 'y': 0.39},  # C1P2
+#     {'x': -3.54, 'y': 0.39},  # C1P3
+#     {'x': -4.74, 'y': 0.39},  # C1P4
+#     {'x': -5.94, 'y': 0.39},  # C1P5
+#     {'x': -7.14, 'y': 0.84},  # C4P1
+#     {'x': -7.14, 'y': 2.04},  # C4P2
+#     {'x': -7.14, 'y': 3.24},  # C4P3
+#     {'x': -7.14, 'y': 4.44},  # C4P4
+#     {'x': -5.94, 'y': 4.44},  # C2P5
+#     {'x': -4.74, 'y': 4.44},  # C2P4
+#     {'x': -3.54, 'y': 4.44},  # C2P3
+#     {'x': -2.34, 'y': 4.44},  # C2P2
+#     {'x': -1.14, 'y': 4.44},  # C2P1
+#     {'x': -2.34, 'y': 4.44},  # C2P2 (duplicado)
+#     {'x': -3.54, 'y': 4.44},  # C2P3 (duplicado)
+#     {'x': -4.74, 'y': 4.44},  # C2P4 (duplicado)
+#     {'x': -5.94, 'y': 4.44},  # C2P5 (duplicado)
+#     {'x': -7.14, 'y': 4.44},  # C4P4 (duplicado)
+#     {'x': -7.14, 'y': 5.64},  # C4P5
+#     {'x': -7.14, 'y': 6.84},  # C4P6
+#     {'x': -5.94, 'y': 6.84},  # C3P5
+#     {'x': -4.74, 'y': 6.84},  # C3P4
+#     {'x': -3.54, 'y': 6.84},  # C3P3
+#     {'x': -2.34, 'y': 6.84},  # C3P2
+#     {'x': -1.14, 'y': 6.84},  # C3P1
+# ]
 
-df_filtrado = filtrar_resultados_por_pontos(results_erro_direcao_df, pontos_alvo)
-def comparar_erro_medio(df_erro_direcao, df_filtrado):
-    """
-    Compara o erro_direcao médio entre df_erro_direcao e df_filtrado por anchor, file_name e ppe_id.
-    Retorna a média geral da diferença dos erros.
-    """
-    # Agrupar e calcular a média do erro_direcao para cada combinação
-    media_erro_geral = df_erro_direcao.groupby(['anchor', 'file_name', 'ppe_id'])['erro_direcao'].mean().reset_index()
-    media_erro_filtrado = df_filtrado.groupby(['anchor', 'file_name', 'ppe_id'])['erro_direcao'].mean().reset_index()
+# df_filtrado = filtrar_resultados_por_pontos(results_erro_direcao_df, pontos_alvo)
+# def comparar_erro_medio(df_erro_direcao, df_filtrado):
+#     """
+#     Compara o erro_direcao médio entre df_erro_direcao e df_filtrado por anchor, file_name e ppe_id.
+#     Retorna a média geral da diferença dos erros.
+#     """
+#     # Agrupar e calcular a média do erro_direcao para cada combinação
+#     media_erro_geral = df_erro_direcao.groupby(['anchor', 'file_name', 'ppe_id'])['erro_direcao'].mean().reset_index()
+#     media_erro_filtrado = df_filtrado.groupby(['anchor', 'file_name', 'ppe_id'])['erro_direcao'].mean().reset_index()
 
-    # Mesclar os dois DataFrames pelas chaves
-    comparacao = pd.merge(
-        media_erro_geral, media_erro_filtrado,
-        on=['anchor', 'file_name', 'ppe_id'],
-        suffixes=('_geral', '_filtrado')
-    )
+#     # Mesclar os dois DataFrames pelas chaves
+#     comparacao = pd.merge(
+#         media_erro_geral, media_erro_filtrado,
+#         on=['anchor', 'file_name', 'ppe_id'],
+#         suffixes=('_geral', '_filtrado')
+#     )
 
-    # Calcular a diferença
-    comparacao['diferenca'] = comparacao['erro_direcao_geral'] - comparacao['erro_direcao_filtrado']
+#     # Calcular a diferença
+#     comparacao['diferenca'] = comparacao['erro_direcao_geral'] - comparacao['erro_direcao_filtrado']
 
-    # Retornar a média geral da diferença
-    media_diferenca = comparacao['diferenca'].mean()
-    print(f'Média geral da diferença dos erros: {media_diferenca:.4f}')
-    return media_diferenca
+#     # Retornar a média geral da diferença
+#     media_diferenca = comparacao['diferenca'].mean()
+#     print(f'Média geral da diferença dos erros: {media_diferenca:.4f}')
+#     return media_diferenca
 
-# Exemplo de uso:
-comparar_erro_medio(results_erro_direcao_df, df_filtrado)
+# # Exemplo de uso:
+# #comparar_erro_medio(results_erro_direcao_df, df_filtrado)
 
-# Agora você pode usar df_filtrado para análises ou gráficos específicos.
+# # Agora você pode usar df_filtrado para análises ou gráficos específicos.

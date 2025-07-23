@@ -15,7 +15,7 @@ from scipy.spatial import cKDTree
 base_path = '0. Dataset Teste'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'static'  # Cenário a ser analisado
+cenario = 'calibration'  # Cenário a ser analisado
 
 # Total esperado de pacotes
 total_esperado = 181
@@ -25,18 +25,18 @@ considerar_arquivos = {
     "ORT": False,
     "SYLABS": False,
     "UBLOX": False,
-    "4T": True,
+    "4T": False,
     "3T": False,
-    "OUTROS": False
+    "OUTROS": True
 }
 
 # Variáveis para definir quais gráficos serão plotados
 plotar_graficos = {
-    "nao_processados_e_recebidos": True,
+    "nao_processados_e_recebidos": False,
     "heatmap_nao_processados": False,
     "heatmap_nao_recebidos": False,
     "grafico_espacial_nao_processados": False,
-    "grafico_espacial_nao_recebidos": False,
+    "grafico_espacial_nao_recebidos": True,
     "histograma": False
 }
 
@@ -274,16 +274,26 @@ def gerar_graficos(results_df, tipo='nao_processados'):
 
 def plot_heatmap_ancora(results_df, data_path, tipo='nao_processados', ppe_id=None, radius=0.85, grid_res=150):
     anchors = list(anchor_coords.keys())
-    #tipo = 'nao_processados'
+    tipo = 'nao_recebidos'
+
+    # Define NLoS points and their affected anchors (by anchor index)
+    nlos_points = [
+        {'pos': (-8.34, 4.74), 'anchors': set(anchor_coords.keys())},  # All anchors
+        {'pos': (8.64, 1.44), 'anchors': {3, 5}},  # A03, A05
+        {'pos': (-8.64, 7.44), 'anchors': {2, 4, 5, 6, 7}},  # A02, A04, A05, A06, A07
+    ]
+
     for anchor in anchors:
         fig, ax = plt.subplots(figsize=(12, 10))
         coords = anchor_coords[anchor]
 
         # Filtrar resultados para esta ancora
         anchor_results = results_df[results_df['anchor'] == anchor]
-        xs, ys, losses = [], [], []
+        xs, ys, losses, nlos_flags = [], [], [], []
         for _, row in anchor_results.iterrows():
             file_name = row['file_name']
+            # Only apply NLoS coloring for files not starting with 'ORT'
+            is_ort = file_name.startswith('ORT')
             data_file_path = os.path.join(data_path, file_name)
             data_df = pd.read_csv(data_file_path)
             data_df = normalizar_ppe_ids(data_df)
@@ -296,6 +306,18 @@ def plot_heatmap_ancora(results_df, data_path, tipo='nao_processados', ppe_id=No
                     losses.append(row['nao_processados_loss_percentage'])
                 else:
                     losses.append(row['nao_recebidos_loss_percentage'])
+
+                # Check if this point is NLoS for this anchor (and not ORT)
+                nlos = False
+                if not is_ort:
+                    for nlos_point in nlos_points:
+                        px, py = nlos_point['pos']
+                        # Use a small tolerance for float comparison
+                        if abs(x_real - px) < 0.05 and abs(y_real - py) < 0.05:
+                            if anchor in nlos_point['anchors']:
+                                nlos = True
+                                break
+                nlos_flags.append(nlos)
             except Exception:
                 continue
 
@@ -309,7 +331,7 @@ def plot_heatmap_ancora(results_df, data_path, tipo='nao_processados', ppe_id=No
             plt.show()
             continue
 
-        xs, ys, losses = np.array(xs), np.array(ys), np.array(losses)
+        xs, ys, losses, nlos_flags = np.array(xs), np.array(ys), np.array(losses), np.array(nlos_flags)
         grid_res = 50
         xi = np.linspace(xs.min(), xs.max(), grid_res)
         yi = np.linspace(ys.min(), ys.max(), grid_res)
@@ -321,33 +343,45 @@ def plot_heatmap_ancora(results_df, data_path, tipo='nao_processados', ppe_id=No
         dist, _ = tree.query(np.c_[xi.ravel(), yi.ravel()])
         mask = dist.reshape(xi.shape) <= radius
         zi_masked = np.where(mask, zi, np.nan)
-        
 
         ax.imshow(img, extent=[0, -10.70, 8.8, 0], alpha=0.5)
         pcm = ax.pcolormesh(xi, yi, zi_masked, cmap='coolwarm', shading='auto', alpha=0.7, vmin=0, vmax=50)
-        ax.scatter(xs, ys, c=losses, cmap='coolwarm', edgecolor='k', s=60, vmin=0, vmax=50)
+
+        # Plot LoS and NLoS points with different colors
+        los_mask = ~nlos_flags
+        nlos_mask = nlos_flags
+
+        # LoS points (default color)
+        ax.scatter(xs[los_mask], ys[los_mask], c=losses[los_mask], cmap='coolwarm', edgecolor='k', s=60, vmin=0, vmax=50, label='LoS')
+        # NLoS points (use magenta)
+        if np.any(nlos_mask):
+            ax.scatter(xs[nlos_mask], ys[nlos_mask], c='magenta', edgecolor='k', s=80, marker='o', label='NLoS')
+
         ax.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor}')
-        ax.text(coords['x'], coords['y'] + 0.3, f'A{anchor}', fontsize=10, color='red', ha='center')
-        #ax.set_title(f"Heatmap Anchor A{anchor}")
-        ax.set_xlabel("X-axis (meters)", fontsize=16)
-        ax.set_ylabel("Y-axis (meters)", fontsize=16)
-        # Ajustar a barra de cor para ocupar toda a altura do eixo e aumentar o tamanho da fonte e escala
-        # Ajustar a altura do colorbar usando shrink e corrigir a formatação dos ticks
+        ax.text(coords['x'], coords['y']-0.3, f'A{anchor}', fontsize=34, color='red', ha='center')
+        ax.set_xlabel("X-axis (meters)", fontsize=34)
+        ax.set_ylabel("Y-axis (meters)", fontsize=34)
         cbar = fig.colorbar(pcm, ax=ax, orientation='vertical', pad=0.02, aspect=30, shrink=0.75)
-        cbar.set_label('Unavailable Angles (Percentage)', fontsize=16)
-        cbar.ax.tick_params(labelsize=14)
-        # Remover notação científica e garantir escala correta
+        cbar.set_label('Unavailable Angles (Percentage)', fontsize=34)
+        cbar.ax.tick_params(labelsize=34)
         cbar.ax.yaxis.offsetText.set_visible(False)
         cbar.formatter.set_useOffset(False)
         cbar.formatter.set_scientific(False)
         cbar.update_ticks()
         plt.tight_layout()
         ax = plt.gca()
-        ax.tick_params(axis='x', labelsize=16)
-        ax.tick_params(axis='y', labelsize=16)
-        #plt.suptitle(f'Heatmap Espacial por Âncora - PPE_ID: {ppe_id}', fontsize=16)
-        #plt.savefig(f'/home/andrey/Desktop/heatmap_UA_0{anchor}_v2.eps', format='eps', dpi=20)
-        plt.show()
+        ax.tick_params(axis='x', labelsize=34)
+        ax.tick_params(axis='y', labelsize=34)
+        # Add legend for LoS/NLoS
+        handles, labels = ax.get_legend_handles_labels()
+        # Remove duplicate anchor label if present
+        unique = dict(zip(labels, handles))
+        # Only add NLoS to the legend
+        if np.any(nlos_mask):
+            ax.legend([plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='magenta', markersize=10, markeredgecolor='k')],
+                  ['NLoS'], fontsize=30, loc='upper right')
+        #plt.savefig(f'/home/andrey/Desktop/heatmap_LP_0{anchor}_v2.eps', format='eps', dpi=50)
+        #plt.show()
 
 # Função para gerar gráficos espaciais com base no controle por_ppe_id
 def gerar_grafico_espacial(results_df, data_path, tipo='nao_processados'):
