@@ -12,19 +12,19 @@ import math
 base_path = '0. Dataset com Mascara Virtual'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'mobility'  # Cenário a ser analisado
+cenario = 'static'  # Cenário a ser analisado
 
 # Variável para definir se os gráficos e resultados serão feitos por cada tipo de ppe_id ou pela média
 por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela média
 
 # Variável para escolher se arquivos específicos serão considerados
 considerar_arquivos = {
-    "ORT": False,
+    "ORT": True,
     "SYLABS": False,
     "UBLOX": False,
-    "4T": False,
+    "4T": True,
     "3T": False,
-    "OUTROS": True
+    "OUTROS": False
 }
 
 # Variáveis para definir quais gráficos serão plotados
@@ -293,8 +293,8 @@ pontos_alvo = [
     {'x': -1.14, 'y': 6.84},  # C3P1
 ]
 
-resultados_linha_df = pd.DataFrame(resultados_linha)
-df_filtrado = filtrar_resultados_por_pontos(resultados_linha_df, pontos_alvo)
+# resultados_linha_df = pd.DataFrame(resultados_linha)
+# df_filtrado = filtrar_resultados_por_pontos(resultados_linha_df, pontos_alvo)
 
 def comparar_erro_medio(df_erro, df_filtrado):
     """
@@ -316,4 +316,27 @@ def comparar_erro_medio(df_erro, df_filtrado):
     return media_diferenca
 
 # Exemplo de uso:
-comparar_erro_medio(resultados_linha_df, df_filtrado)
+#comparar_erro_medio(resultados_linha_df, df_filtrado)
+
+# Após o processamento dos arquivos e antes de qualquer plot:
+# Calcular e imprimir a média de Z_sylabs para cada PPE (considerando todos os arquivos)
+
+z_sylabs_medias = {}
+
+for file in data_files:
+    file_path = os.path.join(data_path, file)
+    df = pd.read_csv(file_path)
+    df = normalizar_ppe_ids(df)
+    # Remover linhas inválidas
+    df = df[(df['X_real'] != -100) & (df['Y_real'] != -100)]
+    ppe_col = 'ppeID' if 'ppeID' in df.columns else 'ppe_id'
+    if 'Z_sylabs' in df.columns:
+        for ppe in df[ppe_col].unique():
+            media_z = df[df[ppe_col] == ppe]['Z_sylabs'].mean()
+            if ppe not in z_sylabs_medias:
+                z_sylabs_medias[ppe] = []
+            z_sylabs_medias[ppe].append(media_z)
+
+# Print média global por PPE
+for ppe, medias in z_sylabs_medias.items():
+    print(f"PPE: {ppe} - Média Z_sylabs (global): {np.nanmean(medias):.3f}")
