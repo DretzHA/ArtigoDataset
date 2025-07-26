@@ -8,18 +8,6 @@ import math
 from scipy.interpolate import griddata
 from scipy.spatial import cKDTree
 
-'''Arquivo para processar e analisar o erro do ângulo azimute'''
-# Caminho base para os datasets
-# base_path = '0. Dataset Original'
-#base_path = '0. Dataset com Mascara Virtual'
-base_path = '0. Dataset Teste'
-
-# Escolher Cenário - calibration | static | mobility
-cenario = 'static'  # Cenário a ser analisado
-
-# Variável para definir se os gráficos e resultados serão feitos por cada tipo de ppe_id ou pela média
-por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela média
-
 # Variável para escolher se arquivos específicos serão considerados
 considerar_arquivos = {
     "ORT": False,
@@ -28,25 +16,6 @@ considerar_arquivos = {
     "4T": False,
     "3T": False,
     "OUTROS": True
-}
-
-# Variáveis para definir quais gráficos serão plotados
-plotar_graficos = {
-    "erro_direcao_por_ancora": False,
-    "heatmap_erro_direcao": False,
-    "grafico_espacial_erro_direcao": True,
-    "histograma_erro_azimute": False  # Adicionado controle para histograma
-}
-
-# Caminho para a imagem de fundo
-img_path = '1. Arquivos Python/99. Imagens/background_v2.png'
-img = mpimg.imread(img_path)
-
-# Mapeamento do cenário para as pastas correspondentes
-cenario_to_folder = {
-    'calibration': '0. Calibration',
-    'static': '1. Static',
-    'mobility': '2. Mobility'
 }
 
 # Mapeamento das âncoras
@@ -139,6 +108,31 @@ cenario_to_folder = {
     'static': '1. Static'
 }
 
+# Mapeamento de títulos das posições pela coordenada (x, y)
+pos_titulos_coord = {
+    (-1.14, 0.39): "C1P1",
+    (-2.34, 0.39): "C1P2",
+    (-3.54, 0.39): "C1P3",
+    (-4.74, 0.39): "C1P4",
+    (-5.94, 0.39): "C1P5",
+    (-7.14, 0.84): "C4P1",
+    (-7.14, 2.04): "C4P2",
+    (-7.14, 3.24): "C4P3",
+    (-7.14, 4.44): "C4P4",
+    (-5.94, 4.44): "C2P5",
+    (-4.74, 4.44): "C2P4",
+    (-3.54, 4.44): "C2P3",
+    (-2.34, 4.44): "C2P2",
+    (-1.14, 4.44): "C2P1",
+    (-7.14, 5.64): "C4P5",
+    (-7.14, 6.84): "C4P6",
+    (-5.94, 6.84): "C3P5",
+    (-4.74, 6.84): "C3P4",
+    (-3.54, 6.84): "C3P3",
+    (-2.34, 6.84): "C3P2",
+    (-1.14, 6.84): "C3P1"
+}
+
 # Lista para armazenar todos os dados
 dados_boxplot = []
 
@@ -159,7 +153,11 @@ for cenario in cenarios:
             continue
         # Para cada posição (linha), para cada ancora, salva Azim_i
         for idx, row in data_df.iterrows():
-            pos_id = f"{row['X_real']:.0f}_{row['Y_real']:.0f}"
+            x_val = float(row['X_real'])
+            y_val = float(row['Y_real'])
+            if (x_val, y_val) not in pos_titulos_coord:
+                continue  # ignora pontos não mapeados
+            ponto_nome = pos_titulos_coord[(x_val, y_val)]
             for i in range(1, 8):
                 azim_col = f"Azim_{i}"
                 if azim_col in data_df.columns:
@@ -167,9 +165,9 @@ for cenario in cenarios:
                     if not pd.isna(azim_val):
                         dados_boxplot.append({
                             'cenario': cenario,
-                            'pos_id': pos_id,
+                            'pos_id': ponto_nome,
                             'anchor': i,
-                            'Azim': np.degrees(azim_val)
+                            'Azim': azim_val  # mantém em radianos
                         })
 
 # Converte para DataFrame
@@ -184,72 +182,89 @@ n_cols = min(10, len(posicoes))
 fig, axes = plt.subplots(n_rows, n_cols, figsize=(2.5*n_cols, 2.5*n_rows), sharey=True)
 axes = axes.flatten()
 
-# Mapeamento de títulos das posições
-pos_titulos = {
-    "-1_0": "C1P1",
-    "-2_0": "C1P2",
-    "-4_0": "C1P4",
-    "-3_0": "C1P3",
-    "-5_0": "C1P5",
-    "-7_1": "C4P1",
-    "-7_2": "C4P2",
-    "-7_3": "C4P3",
-    "-7_4": "C4P4",
-    "-5_4": "C2P5",
-    "-4_4": "C2P4",
-    "-3_4": "C2P3",
-    "-2_4": "C2P2",
-    "-1_4": "C2P1",
-    "-7_5": "C4P5",
-    "-7_7": "C4P6",
-    "-5_7": "C3P5",
-    "-4_7": "C3P4",
-    "-3_7": "C3P3",
-    "-2_7": "C3P2",
-    "-1_7": "C3P1"
-}
+# Organiza os nomes dos pontos por linha desejada
+linha_C1 = [v for v in pos_titulos_coord.values() if v.startswith("C1")]
+linha_C2 = [v for v in pos_titulos_coord.values() if v.startswith("C2")]
+linha_C3 = [v for v in pos_titulos_coord.values() if v.startswith("C3")]
+linha_C4 = [v for v in pos_titulos_coord.values() if v.startswith("C4") and not v.endswith("C4P6")]
+linha_C4P6 = [v for v in pos_titulos_coord.values() if v == "C4P6"]
 
-for idx, pos in enumerate(posicoes):
-    ax = axes[idx]
-    df_pos = df_box[df_box['pos_id'] == pos]
-    # Para cada ancora, plota boxplot para calibration e static
-    for anchor in anchors:
-        df_anchor = df_pos[df_pos['anchor'] == anchor]
-        # Boxplot para cada cenário
-        data_static = df_anchor[df_anchor['cenario'] == 'static']['Azim']
-        data_calib = df_anchor[df_anchor['cenario'] == 'calibration']['Azim']
-        box_data = [data_static, data_calib]
-        ax.boxplot(
-            box_data,
-            positions=[anchor-0.2, anchor+0.2],
-            widths=0.3,
-            patch_artist=True,
-            boxprops=dict(facecolor='orange', alpha=0.6) if len(data_static) > 0 else dict(facecolor='none'),
-            medianprops=dict(color='black'),
-            showfliers=True
-        )
-        # Adiciona boxplot para calibration em verde
-        if len(data_calib) > 0:
+# Junta na ordem desejada
+posicoes_ordenadas = linha_C1 + linha_C2 + linha_C3 + linha_C4 + linha_C4P6
+
+n_rows = 5
+n_cols = max(len(linha_C1), len(linha_C2), len(linha_C3), len(linha_C4))
+
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(2.5*n_cols, 2.5*n_rows), sharey=True)
+axes = axes.reshape(n_rows, n_cols)
+
+def ajustar_angulo_rad(serie):
+    """
+    Ajusta os ângulos em radianos para evitar que o boxplot mostre valores próximos de -pi e pi como extremos.
+    Garante que a diferença entre os valores seja sempre a menor possível (intervalo circular).
+    """
+    if len(serie) == 0:
+        return serie
+    # Converte para numpy array
+    arr = np.array(serie)
+    # Calcula o ângulo médio usando média circular
+    angulo_medio = np.arctan2(np.mean(np.sin(arr)), np.mean(np.cos(arr)))
+    # Ajusta todos os ângulos para ficarem próximos do ângulo médio
+    arr_ajustado = ((arr - angulo_medio + np.pi) % (2 * np.pi)) - np.pi + angulo_medio
+    return arr_ajustado
+
+for row_idx, linha in enumerate([linha_C1, linha_C2, linha_C3, linha_C4, linha_C4P6]):
+    for col_idx, pos in enumerate(linha):
+        ax = axes[row_idx, col_idx]
+        df_pos = df_box[df_box['pos_id'] == pos]
+        titulo = pos
+        for anchor in anchors:
+            df_anchor = df_pos[df_pos['anchor'] == anchor]
+            data_static = ajustar_angulo_rad(df_anchor[df_anchor['cenario'] == 'static']['Azim'])
+            data_calib = ajustar_angulo_rad(df_anchor[df_anchor['cenario'] == 'calibration']['Azim'])
+            box_data = [data_static, data_calib]
             ax.boxplot(
-                [data_calib],
-                positions=[anchor+0.2],
+                box_data,
+                positions=[anchor-0.2, anchor+0.2],
                 widths=0.3,
                 patch_artist=True,
-                boxprops=dict(facecolor='green', alpha=0.6),
+                boxprops=dict(facecolor='orange', alpha=0.6) if len(data_static) > 0 else dict(facecolor='none'),
                 medianprops=dict(color='black'),
                 showfliers=True
             )
-    titulo = pos_titulos.get(pos, pos)
-    ax.set_title(titulo, fontsize=10)
-    ax.set_xticks(anchors)
-    ax.set_xticklabels([f"{a}" for a in anchors], fontsize=8)
-    ax.set_ylim(-60, 60)
-    if idx % n_cols == 0:
-        ax.set_ylabel("AoA [°]", fontsize=9)
+            if len(data_calib) > 0:
+                ax.boxplot(
+                    [data_calib],
+                    positions=[anchor+0.2],
+                    widths=0.3,
+                    patch_artist=True,
+                    boxprops=dict(facecolor='green', alpha=0.6),
+                    medianprops=dict(color='black'),
+                    showfliers=True
+                )
+        ax.set_title(titulo, fontsize=10)
+        ax.set_xticks(anchors)
+        ax.set_xticklabels([f"{a}" for a in anchors], fontsize=8)
+        ax.set_ylim(-3.14, 3.14)
+        if col_idx == 0:
+            ax.set_ylabel("AoA [°]", fontsize=9)
 
 # Remove subplots extras
-for idx in range(len(posicoes), len(axes)):
-    fig.delaxes(axes[idx])
+for row in range(n_rows):
+    for col in range(n_cols):
+        pos = None
+        if row == 0 and col < len(linha_C1):
+            pos = linha_C1[col]
+        elif row == 1 and col < len(linha_C2):
+            pos = linha_C2[col]
+        elif row == 2 and col < len(linha_C3):
+            pos = linha_C3[col]
+        elif row == 3 and col < len(linha_C4):
+            pos = linha_C4[col]
+        elif row == 4 and col < len(linha_C4P6):
+            pos = linha_C4P6[col]
+        if pos is None or pos not in posicoes_ordenadas:
+            fig.delaxes(axes[row, col])
 
 # Legenda manual
 import matplotlib.patches as mpatches
