@@ -15,7 +15,7 @@ from scipy.spatial import cKDTree
 base_path = '0. Dataset Teste'
 
 # Escolher Cenário - calibration | static | mobility
-cenario = 'calibration'  # Cenário a ser analisado
+cenario = 'static'  # Cenário a ser analisado
 
 # Variável para definir se os gráficos e resultados serão feitos por cada tipo de ppe_id ou pela média
 por_ppe_id = True  # True para resultados por ppe_id, False para resultados pela média
@@ -34,7 +34,7 @@ considerar_arquivos = {
 plotar_graficos = {
     "erro_direcao_por_ancora": False,
     "heatmap_erro_direcao": False,
-    "grafico_espacial_erro_direcao": False,
+    "grafico_espacial_erro_direcao": True,
     "histograma_erro_azimute": False  # Adicionado controle para histograma
 }
 
@@ -402,29 +402,39 @@ def plot_heatmap_ancora(results_df, data_path, radius=0.85, grid_res=120):
 
             ax.imshow(img, extent=[0, -10.70, 8.8, 0], alpha=0.5)
             pcm = ax.pcolormesh(xi, yi, zi_masked, cmap='coolwarm', shading='auto', alpha=0.7, vmin=0, vmax=50)
-            ax.scatter(xs, ys, c=errors, cmap='coolwarm', edgecolor='k', s=60, vmin=0, vmax=50)
+            # Plot all points except the special one for anchor 2
+            if anchor == 2:
+                # Find the index of the special point
+                special_x, special_y = -4.74, 6.84
+                mask_special = (np.isclose(xs, special_x, atol=1e-2)) & (np.isclose(ys, special_y, atol=1e-2))
+                # Plot all other points
+                ax.scatter(xs[~mask_special], ys[~mask_special], c=errors[~mask_special], cmap='coolwarm', edgecolor='k', s=60, vmin=0, vmax=50)
+                # Plot the special point in a different color and add legend
+                if np.any(mask_special):
+                    ax.scatter(xs[mask_special], ys[mask_special], color='lime', edgecolor='k', s=250, marker='*', label='C3P4')
+            else:
+                ax.scatter(xs, ys, c=errors, cmap='coolwarm', edgecolor='k', s=60, vmin=0, vmax=50)
             ax.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor}')
-            ax.text(coords['x'], coords['y'] + 0.3, f'A{anchor}', fontsize=10, color='red', ha='center')
-            #ax.set_title(f"Heatmap Anchor A{anchor} (Erro Azimute)")
-            ax.set_xlabel("X-axis (meters)", fontsize=24)
-            ax.set_ylabel("Y-axis (meters)", fontsize=24)
-            # Ajustar a barra de cor para ocupar toda a altura do eixo e aumentar o tamanho da fonte e escala
-            # Ajustar a altura do colorbar usando shrink e corrigir a formatação dos ticks
+            ax.text(coords['x'], coords['y'] - 0.3, f'A{anchor}', fontsize=34, color='red', ha='center')
+            ax.set_xlabel("X-axis (meters)", fontsize=34)
+            ax.set_ylabel("Y-axis (meters)", fontsize=34)
             cbar = fig.colorbar(pcm, ax=ax, orientation='vertical', pad=0.02, aspect=30, shrink=0.75)
-            cbar.set_label('Azimuth Error (Degrees)', fontsize=24)
-            cbar.ax.tick_params(labelsize=24)
-            # Remover notação científica e garantir escala correta
+            cbar.set_label('Azimuth Error (Degrees)', fontsize=34)
+            cbar.ax.tick_params(labelsize=34)
             cbar.ax.yaxis.offsetText.set_visible(False)
             cbar.formatter.set_useOffset(False)
             cbar.formatter.set_scientific(False)
             cbar.update_ticks()
             plt.tight_layout()
             ax = plt.gca()
-            ax.tick_params(axis='x', labelsize=24)
-            ax.tick_params(axis='y', labelsize=24)
-            #plt.suptitle(f'Heatmap Espacial por Âncora - PPE_ID: {ppe_id}', fontsize=16)
-            #plt.savefig(f'/home/andrey/Desktop/heatmap_az_0{anchor}_ort_{ppe_id}_v2.eps', format='eps', dpi=20)
-            plt.show()
+            ax.tick_params(axis='x', labelsize=34)
+            ax.tick_params(axis='y', labelsize=34)
+            # Show legend only if special point is present and anchor is 2
+            if anchor == 2 and np.any(mask_special):
+                ax.legend([plt.Line2D([0], [0], marker='*', color='w', markerfacecolor='lime', markersize=20, label='C3P4')], ['C3P4'], fontsize=30, loc='upper right')
+            #plt.show()
+            # if ppe_id == 'Camisa':
+            plt.savefig(f'/home/andrey/Desktop/heatmap_az_0{anchor}_v2.eps', format='eps', dpi=50)
 
 
 # Função para gerar gráfico espacial do erro médio 4 ângulo azimute
@@ -544,7 +554,7 @@ if plotar_graficos["grafico_espacial_erro_direcao"]:
                     # Plotar âncoras
                     for anchor_id, coords in anchor_coords.items():
                         ax.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor_id}')
-                        ax.text(coords['x'], coords['y'] + 0.3, f'A{anchor_id}', fontsize=10, color='red', ha='center')
+                        ax.text(coords['x'], coords['y'] - 0.3, f'A{anchor_id}', fontsize=34, color='red', ha='center')
                     
                     for anchor_id, coords in anchor_coords.items():
                         # Verificar se o valor medido do azimute existe antes de plotar
@@ -555,7 +565,7 @@ if plotar_graficos["grafico_espacial_erro_direcao"]:
                             ax.plot(
                                 real_azimuth_x, real_azimuth_y, 
                                 color='blue', linestyle='--', linewidth=2, alpha=0.8, 
-                                label='Real Azimuth' if anchor_id == 1 else ""
+                                label='Real' if anchor_id == 1 else ""
                             )
 
 
@@ -629,7 +639,7 @@ if plotar_graficos["grafico_espacial_erro_direcao"]:
                                     ax.plot(
                                         measured_azimuth_x, measured_azimuth_y, 
                                         color='green', linestyle='-', linewidth=2, alpha=0.8, 
-                                        label='Measured Azimuth' if anchor_id == 1 else ""
+                                        label='Measured' if anchor_id == 1 else ""
                                     )
                                     # ax.plot(
                                     # real_measured_azimuth_x, real_measured_azimuth_y, 
@@ -650,30 +660,30 @@ if plotar_graficos["grafico_espacial_erro_direcao"]:
                                 ax.plot(
                                     measured_azimuth_x, measured_azimuth_y, 
                                     color='green', linestyle='-', linewidth=2, alpha=0.8, 
-                                    label='Measured Azimuth' if anchor_id == 1 else ""
+                                    label='Measured' if anchor_id == 1 else ""
                                 )
                 
                     # Configurar título e layout
                     #ax.set_title(f'Gráfico Espacial - PPE_ID: {ppe_id}, Arquivo: {file_name}, Posição: ({x_real:.2f}, {y_real:.2f})')
-                    ax.set_xlabel("X-axis (meters)", fontsize=16)
-                    ax.set_ylabel("Y-axis (meters)", fontsize=16)
+                    ax.set_xlabel("X-axis (meters)", fontsize=34)
+                    ax.set_ylabel("Y-axis (meters)", fontsize=34)
                     ax.set_xlim((0, -10.70))   
                     ax.set_ylim(8.8, 0)     
-                    ax.tick_params(axis='x', labelsize=16)
-                    ax.tick_params(axis='y', labelsize=16)
+                    ax.tick_params(axis='x', labelsize=34)
+                    ax.tick_params(axis='y', labelsize=34)
                     handles, labels = ax.get_legend_handles_labels()
                     # Filtrar apenas as legendas de 'Measured Azimuth' e 'Real Azimuth'
-                    legend_items = [(h, l) for h, l in zip(handles, labels) if l in ['Measured Azimuth', 'Real Azimuth']]
+                    legend_items = [(h, l) for h, l in zip(handles, labels) if l in ['Measured', 'Real']]
                     # if legend_items:
-                    #     ax.legend(*zip(*legend_items), fontsize=14, loc='upper right')
+                    #     ax.legend(*zip(*legend_items), fontsize=24, loc='upper right')
                     # plt.tight_layout()
                     # print(file_name, k, ppe_id)
                     # if file_name == 'MOV_MID_4T_V1_data.csv' and ppe_id == 'Capacete':
-                    #     #if k == 4 or k == 10 or k ==17 or k == 39 or k ==53 or k == 61:
-                    #     if k ==53 or k == 61:
-                    #         plt.savefig(f'/home/andrey/Desktop/lines_4t_{k}_v2.eps', format='eps', dpi=20)
+                    #     if k == 4 or k == 10 or k ==17 or k == 39 or k ==53 or k == 61:
+                    #     #if k ==53 or k == 61:
+                            # plt.savefig(f'/home/andrey/Desktop/lines_4t_{k}_v2.eps', format='eps', dpi=20)
                     # #Exibir cada figura gerada
-                    plt.show()
+                    #plt.show()
                     # plt.close(fig)
 
                 #     # Salvar o frame na lista
