@@ -213,6 +213,17 @@ def ajustar_angulo_rad(serie):
     arr_ajustado = ((arr - angulo_medio + np.pi) % (2 * np.pi)) - np.pi + angulo_medio
     return arr_ajustado
 
+def ajustar_angulo_graus(serie):
+    """
+    Ajusta os ângulos em radianos para graus, evitando problemas de circularidade.
+    """
+    if len(serie) == 0:
+        return serie
+    arr = np.array(serie)
+    angulo_medio = np.arctan2(np.mean(np.sin(arr)), np.mean(np.cos(arr)))
+    arr_ajustado = ((arr - angulo_medio + np.pi) % (2 * np.pi)) - np.pi + angulo_medio
+    return np.degrees(arr_ajustado)
+
 for row_idx, linha in enumerate([linha_C1, linha_C2, linha_C3, linha_C4, linha_C4P6]):
     for col_idx, pos in enumerate(linha):
         ax = axes[row_idx, col_idx]
@@ -220,8 +231,8 @@ for row_idx, linha in enumerate([linha_C1, linha_C2, linha_C3, linha_C4, linha_C
         titulo = pos
         for anchor in anchors:
             df_anchor = df_pos[df_pos['anchor'] == anchor]
-            data_static = ajustar_angulo_rad(df_anchor[df_anchor['cenario'] == 'static']['Azim'])
-            data_calib = ajustar_angulo_rad(df_anchor[df_anchor['cenario'] == 'calibration']['Azim'])
+            data_static = ajustar_angulo_graus(df_anchor[df_anchor['cenario'] == 'static']['Azim'])
+            data_calib = ajustar_angulo_graus(df_anchor[df_anchor['cenario'] == 'calibration']['Azim'])
             box_data = [data_static, data_calib]
             ax.boxplot(
                 box_data,
@@ -245,9 +256,11 @@ for row_idx, linha in enumerate([linha_C1, linha_C2, linha_C3, linha_C4, linha_C
         ax.set_title(titulo, fontsize=10)
         ax.set_xticks(anchors)
         ax.set_xticklabels([f"{a}" for a in anchors], fontsize=8)
-        ax.set_ylim(-3.14, 3.14)
+        ax.set_ylim(-180, 180)
+        ax.set_xlabel("Anchor ID", fontsize=9)
         if col_idx == 0:
             ax.set_ylabel("AoA [°]", fontsize=9)
+        ax.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
 
 # Remove subplots extras
 for row in range(n_rows):

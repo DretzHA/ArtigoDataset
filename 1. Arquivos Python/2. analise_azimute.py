@@ -353,6 +353,13 @@ def gerar_heatmap(results_df):
 
 def plot_heatmap_ancora(results_df, data_path, radius=0.85, grid_res=120):
     anchors = list(anchor_coords.keys())
+    # Define NLoS points and their affected anchors (by anchor index)
+    nlos_points = [
+        {'pos': (-8.34, 4.74), 'anchors': set(anchor_coords.keys())},  # All anchors
+        {'pos': (-8.64, 1.44), 'anchors': {3, 5}},  # A03, A05
+        {'pos': (-8.64, 7.44), 'anchors': {2, 4, 5, 6, 7}},  # A02, A04, A05, A06, A07
+    ]
+    
     for ppe_id in results_df['ppe_id'].unique():
         ppe_results = results_df[results_df['ppe_id'] == ppe_id]
         for anchor in anchors:
@@ -365,6 +372,7 @@ def plot_heatmap_ancora(results_df, data_path, radius=0.85, grid_res=120):
             mean_results = anchor_results.groupby(['anchor', 'file_name', 'ppe_id']).agg({'erro_direcao': 'mean'}).reset_index()
 
             xs, ys, errors = [], [], []
+            file_names = []
             for _, row in mean_results.iterrows():
                 file_name = row['file_name']
                 data_file_path = os.path.join(data_path, file_name)
@@ -376,6 +384,7 @@ def plot_heatmap_ancora(results_df, data_path, radius=0.85, grid_res=120):
                     xs.append(x_real)
                     ys.append(y_real)
                     errors.append(row['erro_direcao'])
+                    file_names.append(file_name)
                 except Exception:
                     continue
 
@@ -402,20 +411,21 @@ def plot_heatmap_ancora(results_df, data_path, radius=0.85, grid_res=120):
 
             ax.imshow(img, extent=[0, -10.70, 8.8, 0], alpha=0.5)
             pcm = ax.pcolormesh(xi, yi, zi_masked, cmap='coolwarm', shading='auto', alpha=0.7, vmin=0, vmax=50)
+            
             # Plot all points except the special one for anchor 2
             if anchor == 2:
                 # Find the index of the special point
                 special_x, special_y = -4.74, 6.84
                 mask_special = (np.isclose(xs, special_x, atol=1e-2)) & (np.isclose(ys, special_y, atol=1e-2))
                 # Plot all other points
-                ax.scatter(xs[~mask_special], ys[~mask_special], c=errors[~mask_special], cmap='coolwarm', edgecolor='k', s=60, vmin=0, vmax=50)
+                ax.scatter(xs[~mask_special], ys[~mask_special], c=errors[~mask_special], cmap='coolwarm', edgecolor='k', s=60, vmin=0, vmax=50, zorder=2)
                 # Plot the special point in a different color and add legend
                 if np.any(mask_special):
-                    ax.scatter(xs[mask_special], ys[mask_special], color='lime', edgecolor='k', s=250, marker='*', label='C3P4')
+                    ax.scatter(xs[mask_special], ys[mask_special], color='black', edgecolor='k', s=250, marker='D', label='C3P4', zorder=3)
             else:
-                ax.scatter(xs, ys, c=errors, cmap='coolwarm', edgecolor='k', s=60, vmin=0, vmax=50)
-            ax.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor}')
-            ax.text(coords['x'], coords['y'] - 0.3, f'A{anchor}', fontsize=34, color='red', ha='center')
+                ax.scatter(xs, ys, c=errors, cmap='coolwarm', edgecolor='k', s=60, vmin=0, vmax=50, zorder=2)
+            ax.scatter(coords['x'], coords['y'], color='red', marker='s', s=100, label=f'Anchor A{anchor}', zorder=4)
+            ax.text(coords['x'], coords['y'] - 0.3, f'A{anchor}', fontsize=34, color='red', ha='center', zorder=5)
             ax.set_xlabel("X-axis (meters)", fontsize=34)
             ax.set_ylabel("Y-axis (meters)", fontsize=34)
             cbar = fig.colorbar(pcm, ax=ax, orientation='vertical', pad=0.02, aspect=30, shrink=0.75)
@@ -429,9 +439,33 @@ def plot_heatmap_ancora(results_df, data_path, radius=0.85, grid_res=120):
             ax = plt.gca()
             ax.tick_params(axis='x', labelsize=34)
             ax.tick_params(axis='y', labelsize=34)
-            # Show legend only if special point is present and anchor is 2
+            
+            # Create legend with all relevant items
+            legend_handles = []
+            legend_labels = []
+            
+            # Plote NLoS somente se nenhum arquivo começar com 'ORT'
+            has_ort = any(str(f).startswith('ORT') for f in file_names)
+            if not has_ort:
+                nlos_affected = False
+                for nlos_point in nlos_points:
+                    if anchor in nlos_point['anchors']:
+                        nlos_x, nlos_y = nlos_point['pos']
+                        ax.scatter(nlos_x, nlos_y, color='lime', marker='*', s=250, edgecolor='black', linewidth=2, label='NLoS' if not nlos_affected else "", zorder=10)
+                        nlos_affected = True
+                if nlos_affected:
+                    legend_handles.append(plt.Line2D([0], [0], marker='*', color='w', markerfacecolor='lime', markersize=20, markeredgecolor='black', markeredgewidth=2))
+                    legend_labels.append('NLoS')
+            # Add C3P4 legend for anchor 2 if special point is present
             if anchor == 2 and np.any(mask_special):
-                ax.legend([plt.Line2D([0], [0], marker='*', color='w', markerfacecolor='lime', markersize=20, label='C3P4')], ['C3P4'], fontsize=30, loc='upper right')
+                legend_handles.append(plt.Line2D([0], [0], marker='D', color='w', markerfacecolor='black', markersize=20))
+                legend_labels.append('C3P4')
+            
+            # Show legend only if there are items to display
+            if legend_handles:
+                loc = 'lower left' if anchor == 2 else 'upper right'
+                ax.legend(legend_handles, legend_labels, fontsize=30, loc=loc)
+            
             #plt.show()
             # if ppe_id == 'Camisa':
             plt.savefig(f'/home/andrey/Desktop/heatmap_az_0{anchor}_v2.eps', format='eps', dpi=50)
@@ -680,7 +714,6 @@ if plotar_graficos["grafico_espacial_erro_direcao"]:
                     # print(file_name, k, ppe_id)
                     # if file_name == 'MOV_MID_4T_V1_data.csv' and ppe_id == 'Capacete':
                     #     if k == 4 or k == 10 or k ==17 or k == 39 or k ==53 or k == 61:
-                    #     #if k ==53 or k == 61:
                             # plt.savefig(f'/home/andrey/Desktop/lines_4t_{k}_v2.eps', format='eps', dpi=20)
                     # #Exibir cada figura gerada
                     #plt.show()
