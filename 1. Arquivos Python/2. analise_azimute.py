@@ -34,8 +34,8 @@ considerar_arquivos = {
 plotar_graficos = {
     "erro_direcao_por_ancora": False,
     "heatmap_erro_direcao": False,
-    "grafico_espacial_erro_direcao": True,
-    "histograma_erro_azimute": False  # Adicionado controle para histograma
+    "grafico_espacial_erro_direcao": False,
+    "histograma_erro_azimute": True  # Adicionado controle para histograma
 }
 
 # Caminho para a imagem de fundo

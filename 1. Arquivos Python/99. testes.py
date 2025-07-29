@@ -216,77 +216,93 @@ import matplotlib.pyplot as plt
 
 # corrigir_altura_por_tag('0. Dataset com Mascara Virtual/2. Mobility/Data IQ')
 
-# Caminho dos arquivos CSV
-base_dir = ""  # ajuste para o diretório correto
-arquivos_nao_processados = [
-    "nao_processados_clb_1t.csv",
-    "nao_processados_stc_1t.csv",
-    "nao_processados_stc_4t.csv"
-]
-arquivos_nao_recebidos = [
-    "nao_recebidos_clb_1t.csv",
-    "nao_recebidos_stc_1t.csv",
-    "nao_recebidos_stc_4t.csv"
-]
+# # Caminho dos arquivos CSV
+# base_dir = ""  # ajuste para o diretório correto
+# arquivos_nao_processados = [
+#     "nao_processados_clb_1t.csv",
+#     "nao_processados_stc_1t.csv",
+#     "nao_processados_stc_4t.csv"
+# ]
+# arquivos_nao_recebidos = [
+#     "nao_recebidos_clb_1t.csv",
+#     "nao_recebidos_stc_1t.csv",
+#     "nao_recebidos_stc_4t.csv"
+# ]
 
-# Lê todos os arquivos em DataFrames
-dfs_nao_processados = [pd.read_csv(os.path.join(base_dir, arq)) for arq in arquivos_nao_processados]
-dfs_nao_recebidos = [pd.read_csv(os.path.join(base_dir, arq)) for arq in arquivos_nao_recebidos]
+# # Lê todos os arquivos em DataFrames
+# dfs_nao_processados = [pd.read_csv(os.path.join(base_dir, arq)) for arq in arquivos_nao_processados]
+# dfs_nao_recebidos = [pd.read_csv(os.path.join(base_dir, arq)) for arq in arquivos_nao_recebidos]
 
-# Nomes para legenda
-labels_nao_processados = ["UA (L1 - CLB - 1T)", "UA (L1 - STC - 1T)", "UA (L1 - STC - 4T)"]
-labels_nao_recebidos = ["MP (L1 - CLB - 1T)", "MP (L1 - STC - 1T)", "MP (L1 - STC - 4T)"]
+# # Nomes para legenda
+# labels_nao_processados = ["UA (L1 - CLB - 1T)", "UA (L1 - STC - 1T)", "UA (L1 - STC - 4T)"]
+# labels_nao_recebidos = ["MP (L1 - CLB - 1T)", "MP (L1 - STC - 1T)", "MP (L1 - STC - 4T)"]
 
-# Agrupa por ancora e calcula a média da perda
-loss_np = [df.groupby('anchor')['nao_processados_loss_percentage'].mean() for df in dfs_nao_processados]
-loss_nr = [df.groupby('anchor')['nao_recebidos_loss_percentage'].mean() for df in dfs_nao_recebidos]
+# # Agrupa por ancora e calcula a média da perda
+# loss_np = [df.groupby('anchor')['nao_processados_loss_percentage'].mean() for df in dfs_nao_processados]
+# loss_nr = [df.groupby('anchor')['nao_recebidos_loss_percentage'].mean() for df in dfs_nao_recebidos]
 
-# Descobre todas as âncoras presentes (para garantir alinhamento)
-all_anchors = sorted(set().union(*[l.index for l in loss_np + loss_nr]))
+# # Descobre todas as âncoras presentes (para garantir alinhamento)
+# all_anchors = sorted(set().union(*[l.index for l in loss_np + loss_nr]))
 
-# Monta matriz de valores para plot
-def get_loss_for_anchors(loss_list, anchors):
-    return [loss.reindex(anchors, fill_value=0).values for loss in loss_list]
+# # Monta matriz de valores para plot
+# def get_loss_for_anchors(loss_list, anchors):
+#     return [loss.reindex(anchors, fill_value=0).values for loss in loss_list]
 
-loss_np_vals = get_loss_for_anchors(loss_np, all_anchors)
-loss_nr_vals = get_loss_for_anchors(loss_nr, all_anchors)
+# loss_np_vals = get_loss_for_anchors(loss_np, all_anchors)
+# loss_nr_vals = get_loss_for_anchors(loss_nr, all_anchors)
 
-# Figura para Não Processados (NP)
-fig, ax = plt.subplots(figsize=(12, 6))
-bar_width = 0.18
-x = np.arange(len(all_anchors))
-colors = plt.cm.tab10.colors
+# # Figura para Não Processados (NP)
+# fig, ax = plt.subplots(figsize=(12, 6))
+# bar_width = 0.18
+# x = np.arange(len(all_anchors))
+# colors = plt.cm.tab10.colors
 
-for i, vals in enumerate(loss_np_vals):
-    ax.bar(x + i*bar_width - bar_width, vals, width=bar_width, color=colors[i], label=labels_nao_processados[i])
+# for i, vals in enumerate(loss_np_vals):
+#     ax.bar(x + i*bar_width - bar_width, vals, width=bar_width, color=colors[i], label=labels_nao_processados[i])
 
-ax.set_xlabel('Anchor', fontsize=18)
-ax.set_ylabel('Loss Percentage (%)', fontsize=18)
-ax.set_xticks(x)
-ax.set_xticklabels(all_anchors, fontsize=18)
-ax.tick_params(axis='y', labelsize=18)
-plt.tight_layout()
-plt.grid(alpha=0.5, linestyle='--')
-ax.set_ylim(0, 35)
-ax.legend(fontsize=14)
-#plt.title("Packet Loss per Anchor - Not Processed")
-plt.show()
+# ax.set_xlabel('Anchor', fontsize=18)
+# ax.set_ylabel('Loss Percentage (%)', fontsize=18)
+# ax.set_xticks(x)
+# ax.set_xticklabels(all_anchors, fontsize=18)
+# ax.tick_params(axis='y', labelsize=18)
+# plt.tight_layout()
+# plt.grid(alpha=0.5, linestyle='--')
+# ax.set_ylim(0, 35)
+# ax.legend(fontsize=14)
+# #plt.title("Packet Loss per Anchor - Not Processed")
+# plt.show()
 
-# Figura para Não Recebidos (NR)
-fig, ax = plt.subplots(figsize=(12, 6))
-for i, vals in enumerate(loss_nr_vals):
-    ax.bar(x + i*bar_width - bar_width, vals, width=bar_width, color=colors[i+3], label=labels_nao_recebidos[i])
+# # Figura para Não Recebidos (NR)
+# fig, ax = plt.subplots(figsize=(12, 6))
+# for i, vals in enumerate(loss_nr_vals):
+#     ax.bar(x + i*bar_width - bar_width, vals, width=bar_width, color=colors[i+3], label=labels_nao_recebidos[i])
 
-ax.set_xlabel('Anchor', fontsize=18)
-ax.set_ylabel('Loss Percentage (%)', fontsize=18)
-ax.set_xticks(x)
-ax.set_xticklabels(all_anchors, fontsize=18)
-ax.tick_params(axis='y', labelsize=18)
-plt.tight_layout()
-plt.grid(alpha=0.5, linestyle='--')
-ax.set_ylim(0, 35)
-ax.legend(fontsize=14)
-#plt.title("Packet Loss per Anchor - Not Received")
-plt.show()
+# ax.set_xlabel('Anchor', fontsize=18)
+# ax.set_ylabel('Loss Percentage (%)', fontsize=18)
+# ax.set_xticks(x)
+# ax.set_xticklabels(all_anchors, fontsize=18)
+# ax.tick_params(axis='y', labelsize=18)
+# plt.tight_layout()
+# plt.grid(alpha=0.5, linestyle='--')
+# ax.set_ylim(0, 35)
+# ax.legend(fontsize=14)
+# #plt.title("Packet Loss per Anchor - Not Received")
+# plt.show()
 
 
+
+# Leitura do arquivo solicitado
+file_path = '0. Dataset Teste/1. Static/Data IQ/STC_C3P4_data.csv'
+df = pd.read_csv(file_path)
+
+# Faz o describe das colunas Azim_1 a Azim_7 (convertendo para graus)
+for i in range(1, 8):
+    col_name = f'Azim_{i}'
+    if col_name in df.columns:
+        # Converte de radianos para graus
+        df[col_name + '_graus'] = np.degrees(df[col_name])
+        print(f'Describe para {col_name} (graus):')
+        print(df[col_name + '_graus'].describe())
+        print()
+    else:
+        print(f'Coluna {col_name} não encontrada.')
